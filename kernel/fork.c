@@ -1192,6 +1192,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	get_seccomp_filter(p);
 
 	rt_mutex_init_task(p);
+	enc_keys_task_init(p);
 
 #ifdef CONFIG_PROVE_LOCKING
 	DEBUG_LOCKS_WARN_ON(!p->hardirqs_enabled);
@@ -1344,6 +1345,9 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	retval = copy_io(clone_flags, p);
 	if (retval)
 		goto bad_fork_cleanup_namespaces;
+	retval = copy_enc_keys(clone_flags, p);
+	if (retval)
+		goto bad_fork_cleanup_enc_keys;
 	retval = copy_thread(clone_flags, stack_start, stack_size, p);
 	if (retval)
 		goto bad_fork_cleanup_io;
@@ -1497,6 +1501,8 @@ bad_fork_free_pid:
 bad_fork_cleanup_io:
 	if (p->io_context)
 		exit_io_context(p);
+bad_fork_cleanup_enc_keys:
+	 exit_task_enc_keys(p);
 bad_fork_cleanup_namespaces:
 	exit_task_namespaces(p);
 bad_fork_cleanup_mm:

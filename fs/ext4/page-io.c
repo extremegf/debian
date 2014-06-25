@@ -13,6 +13,9 @@
 #include <linux/pagemap.h>
 #include <linux/quotaops.h>
 #include <linux/string.h>
+#include <linux/spinlock.h>
+#include <linux/list.h>
+#include <linux/hash.h>
 #include <linux/buffer_head.h>
 #include <linux/writeback.h>
 #include <linux/pagevec.h>
@@ -33,8 +36,102 @@
 
 static struct kmem_cache *io_end_cachep;
 
+#define PS_HASH_BUCKET_BITS 6
+#define PS_HASH_BUCKETS (1 << PS_HASH_BUCKET_BITS)
+
+/* I realize how inefficient this data structure is!
+ *
+ * I tested this page_switch mechanism by turning it on for all writes. Then
+ * I compiled the kernel with it the list reached 11418 elements in length.
+ * However, page_switch is now only used with encrypted files. Moreover it is
+ * relatively easy to replace this list with a hash table - something I don't
+ * want to do now though.
+ */
+long max_seen_page_switches_len = 0;
+static struct list_head enc_to_org_hashtab[PS_HASH_BUCKETS];
+static struct list_head org_to_enc_hashtab[PS_HASH_BUCKETS];
+static spinlock_t page_switch_lock;
+
+static struct page_switch *get_page_switch(struct page* org_page) {
+	struct page_switch *p;
+	struct list_head *pos;
+	unsigned long flags;
+	unsigned long o2e_bucket = hash_ptr(org_page, PS_HASH_BUCKET_BITS);
+	unsigned long e2o_bucket;
+
+	spin_lock_irqsave(&page_switch_lock, flags);
+	list_for_each(pos, &org_to_enc_hashtab[o2e_bucket]){
+		p = list_entry(pos, struct page_switch, org_to_enc_bucket);
+		if (p->org_page == org_page) {
+			p->get_cnt += 1;
+            spin_unlock_irqrestore(&page_switch_lock, flags);
+
+            return p;
+		}
+	}
+	spin_unlock_irqrestore(&page_switch_lock, flags);
+
+	/* Page was not allocated yet */
+	p = kmalloc(sizeof(struct page_switch), GFP_NOFS);
+	if (!p)
+		return NULL;
+
+	p->get_cnt = 1;
+	p->org_page = org_page;
+	p->enc_page = alloc_page(GFP_NOFS | __GFP_HIGHMEM);
+	if (!p->enc_page) {
+		kfree(p);
+		return NULL;
+	}
+	e2o_bucket = hash_ptr(p->enc_page, PS_HASH_BUCKET_BITS);
+
+	spin_lock_irqsave(&page_switch_lock, flags);
+	list_add(&p->org_to_enc_bucket, &org_to_enc_hashtab[o2e_bucket]);
+	list_add(&p->enc_to_org_bucket, &enc_to_org_hashtab[e2o_bucket]);
+	spin_unlock_irqrestore(&page_switch_lock, flags);
+
+	return p;
+}
+
+static struct page* find_org_and_put_enc_page(struct page* enc_page) {
+	struct page_switch *p;
+	struct list_head *pos;
+	unsigned long flags;
+	unsigned long e2o_bucket = hash_ptr(enc_page, PS_HASH_BUCKET_BITS);
+
+	spin_lock_irqsave(&page_switch_lock, flags);
+	list_for_each(pos, &enc_to_org_hashtab[e2o_bucket]){
+		p = list_entry(pos, struct page_switch, enc_to_org_bucket);
+		if (p->enc_page == enc_page)  {
+			struct page *org_page = p->org_page;
+
+			p->get_cnt -= 1;
+			if (p->get_cnt == 0) {
+				__free_page(p->enc_page);
+				p->enc_page = NULL;
+
+				list_del(&p->enc_to_org_bucket);
+				list_del(&p->org_to_enc_bucket);
+
+				kfree(p);
+			}
+            spin_unlock_irqrestore(&page_switch_lock, flags);
+
+			return org_page;
+		}
+	}
+	spin_unlock_irqrestore(&page_switch_lock, flags);
+	return NULL;
+}
+
 int __init ext4_init_pageio(void)
 {
+	int i;
+	for (i = 0; i < PS_HASH_BUCKETS; i++) {
+		INIT_LIST_HEAD(&enc_to_org_hashtab[i]);
+		INIT_LIST_HEAD(&org_to_enc_hashtab[i]);
+	}
+	spin_lock_init(&page_switch_lock);
 	io_end_cachep = KMEM_CACHE(ext4_io_end, SLAB_RECLAIM_ACCOUNT);
 	if (io_end_cachep == NULL)
 		return -ENOMEM;
@@ -68,15 +165,24 @@ static void ext4_finish_bio(struct bio *bio)
 
 	for (i = 0; i < bio->bi_vcnt; i++) {
 		struct bio_vec *bvec = &bio->bi_io_vec[i];
-		struct page *page = bvec->bv_page;
+		struct page *org_or_enc_page = bvec->bv_page;
+		struct page *page;
 		struct buffer_head *bh, *head;
 		unsigned bio_start = bvec->bv_offset;
 		unsigned bio_end = bio_start + bvec->bv_len;
 		unsigned under_io = 0;
 		unsigned long flags;
 
-		if (!page)
+		if (!org_or_enc_page)
 			continue;
+
+		/* If we used a page switch to save encrypted data we must handle
+		 * the dirty bit of the original unencrypted page in memory.
+		 */
+		page = find_org_and_put_enc_page(org_or_enc_page);
+		if (!page) {
+			page = org_or_enc_page; /* There was no page switch */
+		}
 
 		if (error) {
 			SetPageError(page);
@@ -380,6 +486,7 @@ static int io_submit_add_bh(struct ext4_io_submit *io,
 			    struct buffer_head *bh)
 {
 	int ret;
+	struct page *page;
 
 	if (io->io_bio && bh->b_blocknr != io->io_next_block) {
 submit_and_retry:
@@ -390,9 +497,30 @@ submit_and_retry:
 		if (ret)
 			return ret;
 	}
-	ret = bio_add_page(io->io_bio, bh->b_page, bh->b_size, bh_offset(bh));
-	if (ret != bh->b_size)
+
+	/*
+	 * We may encrypt the page before write. Changing page in place
+	 * would break mmap, so we need to get a new page and use it instead.
+	 */
+	page = bh->b_page;
+
+	if (tenc_write_needs_page_switch(bh)) {
+		struct page_switch *page_switch = get_page_switch(page);
+		if (!page_switch) {
+			return -ENOMEM;
+		}
+
+		tenc_encrypt_block(bh, page_switch->enc_page);
+
+		page = page_switch->enc_page;
+	}
+
+	ret = bio_add_page(io->io_bio, page, bh->b_size, bh_offset(bh));
+	if (ret != bh->b_size) {
+		/* Bio not added. We need to put the page_switch */
+		find_org_and_put_enc_page(page);
 		goto submit_and_retry;
+	}
 	io->io_next_block++;
 	return 0;
 }

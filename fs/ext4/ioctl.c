@@ -14,6 +14,7 @@
 #include <linux/compat.h>
 #include <linux/mount.h>
 #include <linux/file.h>
+#include <linux/filecrypt.h>
 #include <asm/uaccess.h>
 #include "ext4_jbd2.h"
 #include "ext4.h"
@@ -625,6 +626,21 @@ resizefs_out:
 	}
 	case EXT4_IOC_PRECACHE_EXTENTS:
 		return ext4_ext_precache(inode);
+
+	case EXT4_ENCRYPT:
+	{
+		struct ext4_ioctl_encrypt __user *user_encrypt = (void*)arg;
+		struct ext4_ioctl_encrypt encrypt;
+		if (copy_from_user(&encrypt, user_encrypt,
+				sizeof(struct ext4_ioctl_encrypt))) {
+			return -EFAULT;
+		}
+		/* We do not support encryption of inode inline data. This
+		 * has to be disabled in ext4 specific context.
+		 */
+		ext4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
+		return tenc_encrypt_ioctl(filp, encrypt.key_id);
+	}
 
 	default:
 		return -ENOTTY;

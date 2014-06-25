@@ -2698,6 +2698,21 @@ int simple_transaction_release(struct inode *inode, struct file *file);
 
 void simple_transaction_set(struct file *file, size_t n);
 
+/* Transparent file encryption callbacks. */
+
+#define TENC_CAN_UNLOCK 0
+#define TENC_LEAVE_LOCKED 1
+#define TENC_DECR_FAIL -1
+extern int tenc_write_needs_page_switch(struct buffer_head *bh);
+extern void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page);
+extern void tenc_decrypt_buffer_head(struct buffer_head *bh);
+extern int tenc_decrypt_page(struct page *page);
+extern int tenc_can_open(struct inode *inode, struct file *filp);
+extern void tenc_release(struct inode *inode, struct file *filp);
+extern long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[16]);
+extern int tenc_file_is_encrypted(struct inode *inode);
+
+
 /*
  * simple attribute files
  *
