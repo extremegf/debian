@@ -2923,12 +2923,11 @@ static int ext4_readpage(struct file *file, struct page *page)
 
 	trace_ext4_readpage(page);
 
-	if (ext4_has_inline_data(inode))
-		ret = ext4_readpage_inline(inode, page);
-
-
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
+
+	if (ext4_has_inline_data(inode))
+		ret = ext4_readpage_inline(inode, page);
 
 	if (ret == -EAGAIN)
 		return mpage_readpage(page, ext4_get_block);
@@ -2941,6 +2940,9 @@ ext4_readpages(struct file *file, struct address_space *mapping,
 		struct list_head *pages, unsigned nr_pages)
 {
 	struct inode *inode = mapping->host;
+
+	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
+		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
 	/* If the file has inline data, no need to do readpages. */
 	if (ext4_has_inline_data(inode))
