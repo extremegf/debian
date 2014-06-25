@@ -2927,7 +2927,7 @@ static int ext4_readpage(struct file *file, struct page *page)
 		ret = ext4_readpage_inline(inode, page);
 
 
-	if (0 < ext4_xattr_get(inode, 1, 'show_in_log', NULL, 0))
+	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
 	if (ret == -EAGAIN)
