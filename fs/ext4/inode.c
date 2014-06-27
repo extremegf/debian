@@ -1780,6 +1780,16 @@ out:
 	return ret;
 }
 
+void mess_with_page(struct page *page) {
+	void *pg_addr = page_address(page);
+	char *pg_arr = (char*)pg_addr;
+	lock_page(page);
+	for (int i = 0; i < PAGE_SIZE; i++) {
+		pg_arr[i] = 'x';
+	}
+	unlock_page(page);
+}
+
 /*
  * Note that we don't need to start a transaction unless we're journaling data
  * because we should have holes filled from ext4_page_mkwrite(). We even don't
@@ -1830,6 +1840,9 @@ static int ext4_writepage(struct page *page,
 	struct buffer_head *page_bufs = NULL;
 	struct inode *inode = page->mapping->host;
 	struct ext4_io_submit io_submit;
+
+	if (0 < ext4_xattr_get(inode, 1, "mess_with_pages", NULL, 0))
+		mess_with_page(page);
 
 	trace_ext4_writepage(page);
 	size = i_size_read(inode);
@@ -2387,6 +2400,31 @@ static int __writepage(struct page *page, struct writeback_control *wbc,
 	return ret;
 }
 
+void mess_with_pages(struct address_space *mapping)
+{
+	unsigned long maxpages, lpages=100, nr, loop, ret;
+	struct page **pages = NULL, **ptr, *page;
+	loff_t isize;
+
+	/* gang-find the pages */
+	ret = -ENOMEM;
+	pages = kzalloc(lpages * sizeof(struct page *), GFP_KERNEL);
+	if (!pages)
+		goto out_free;
+
+	nr = find_get_pages(mapping, 0, lpages, pages);
+
+	for (loop = 0; loop < nr; loop++) {
+		mess_with_page(pages[loop]);
+	}
+
+	ptr = pages;
+	for (loop = nr; loop > 0; loop--)
+		put_page(*ptr++);
+out_free:
+	kfree(pages);
+}
+
 static int ext4_writepages(struct address_space *mapping,
 			   struct writeback_control *wbc)
 {
@@ -2402,6 +2440,9 @@ static int ext4_writepages(struct address_space *mapping,
 	bool done;
 	struct blk_plug plug;
 	bool give_up_on_write = false;
+
+	if (0 < ext4_xattr_get(inode, 1, "mess_with_pages", NULL, 0))
+		mess_with_pages(mapping);
 
 	trace_ext4_writepages(inode, wbc);
 
