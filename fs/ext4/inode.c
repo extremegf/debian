@@ -1783,8 +1783,9 @@ out:
 void mess_with_page(struct page *page) {
 	void *pg_addr = page_address(page);
 	char *pg_arr = (char*)pg_addr;
+	int i;
 	lock_page(page);
-	for (int i = 0; i < PAGE_SIZE; i++) {
+	for (i = 0; i < PAGE_SIZE; i++) {
 		pg_arr[i] = 'x';
 	}
 	unlock_page(page);
