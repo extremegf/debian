@@ -1790,6 +1790,11 @@ void mess_with_page(struct page *page) {
 		void *pg_addr = page_address(page);
 		char *pg_arr = (char*)pg_addr;
 
+		if (pg_addr == NULL) {
+			printk(KERN_INFO "pg_addr == NULL !!!\n");
+			return;
+		}
+
 		lock_page(page);
 		for (i = 0; i < 30; i++) {
 			char c = pg_arr[i];
