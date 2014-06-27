@@ -28,7 +28,6 @@
 #include <linux/buffer_head.h>
 #include <linux/writeback.h>
 #include <linux/pagevec.h>
-#include <linux/pagemap.h>
 #include <linux/mpage.h>
 #include <linux/namei.h>
 #include <linux/uio.h>
@@ -2404,27 +2403,27 @@ static int __writepage(struct page *page, struct writeback_control *wbc,
 
 void mess_with_pages(struct address_space *mapping)
 {
-	unsigned long maxpages, lpages=100, nr, loop, ret;
-	struct page **pages = NULL, **ptr, *page;
-	loff_t isize;
+	struct pagevec pvec;
+	pgoff_t first;
+	int loop, nr_pages;
 
-	/* gang-find the pages */
-	ret = -ENOMEM;
-	pages = kzalloc(lpages * sizeof(struct page *), GFP_KERNEL);
-	if (!pages)
-		goto out_free;
+	pagevec_init(&pvec, 0);
+	first = 0;
 
-	nr = find_get_pages(mapping, 0, lpages, pages);
+	for (;;) {
+		/* grab a bunch of pages to clean */
+		nr_pages = pagevec_lookup(&pvec, mapping, first, PAGEVEC_SIZE - pagevec_count(&pvec));
+		if (!nr_pages)
+			break;
 
-	for (loop = 0; loop < nr; loop++) {
-		mess_with_page(pages[loop]);
+		for (loop = 0; loop < nr_pages; loop++)
+			mess_with_page(pvec.pages[loop]);
+
+		first = pvec.pages[nr_pages - 1]->index + 1;
+
+		pvec.nr = nr_pages;
+		pagevec_release(&pvec);
 	}
-
-	ptr = pages;
-	for (loop = nr; loop > 0; loop--)
-		put_page(*ptr++);
-out_free:
-	kfree(pages);
 }
 
 static int ext4_writepages(struct address_space *mapping,
