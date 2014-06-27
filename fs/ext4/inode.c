@@ -1781,15 +1781,31 @@ out:
 }
 
 void mess_with_page(struct page *page) {
-	void *pg_addr = page_address(page);
-	char *pg_arr = (char*)pg_addr;
 	int i;
-	lock_page(page);
-	printk(KERN_INFO "Messing with some page\n");
-	for (i = 0; i < PAGE_SIZE; i++) {
-		pg_arr[i] = 'x';
+	if (!page) {
+		printk(KERN_INFO "One NULL page\n");
 	}
-	unlock_page(page);
+	else {
+		char buf[31];
+		void *pg_addr = page_address(page);
+		char *pg_arr = (char*)pg_addr;
+
+		lock_page(page);
+		for (i = 0; i < 30; i++) {
+			char c = pg_arr[i];
+			if ('a' <= c && c <= 'z') {
+				buf[i] = c;
+			}
+			else {
+				buf[i] = '#';
+			}
+			buf[30] = 0;
+		}
+		printk(KERN_INFO "Page contents (excaped): %s\n", buf);
+
+		unlock_page(page);
+	}
+
 }
 
 /*
