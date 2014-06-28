@@ -1847,9 +1847,10 @@ void make_pages_fail_if_unlock_not_found2(struct address_space *mapping)
 			struct page *page = pvec.pages[loop];
 			if (PageLocked(page) && PageDirty(page)) {
 				make_page_fail_if_unlock_not_found(page);
+				printk(KERN_INFO "A page can be PageLocked(page) && PageDirty(page) on writepages\n");
 			}
 			else if(!PageLocked(page) && PageDirty(page)) {
-				printk(KERN_INFO "A page can be !PageLocked(page) && PageDirty(page) on writepages");
+				printk(KERN_INFO "A page can be !PageLocked(page) && PageDirty(page) on writepages\n");
 			}
 		}
 
