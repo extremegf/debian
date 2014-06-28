@@ -1817,11 +1817,15 @@ void make_page_fail_if_unlock_not_found(struct page *page) {
 	page->segv_if_unlocked_unproc = 23423421;
 }
 
-void make_pages_fail_if_unlock_not_found(struct page **page, unsigned nr) {
-	int i;
-	for (i = 0; i < nr; i++) {
-		make_page_fail_if_unlock_not_found(page[i]);
+void make_pages_fail_if_unlock_not_found(struct list_head **pages, unsigned nr_pages) {
+	int page_idx;
+
+	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
+		struct page *page = list_entry(pages->prev, struct page, lru);
+		pages = page->lru;
+		make_page_fail_if_unlock_not_found(page);
 	}
+
 }
 
 void make_pages_fail_if_unlock_not_found2(struct address_space *mapping)
