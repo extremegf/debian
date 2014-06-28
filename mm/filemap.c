@@ -607,6 +607,11 @@ EXPORT_SYMBOL_GPL(add_page_wait_queue);
  */
 void unlock_page(struct page *page)
 {
+	if (page->segv_if_unlocked_unproc == 23423421) {
+		printk(KERN_INFO "A page was unlocked without clearing segv_if_unlocked_unproc at:\n");
+		dump_stack();
+		page->segv_if_unlocked_unproc = 0;
+	}
 	VM_BUG_ON(!PageLocked(page));
 	clear_bit_unlock(PG_locked, &page->flags);
 	smp_mb__after_clear_bit();

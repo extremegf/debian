@@ -184,6 +184,8 @@ struct page {
 	unsigned long debug_flags;	/* Use atomic bitops on this */
 #endif
 
+	unsigned long segv_if_unlocked_unproc; // SIGSEGV if this is eq 23423421
+
 #ifdef CONFIG_KMEMCHECK
 	/*
 	 * kmemcheck wants to track the status of each byte in a page; this

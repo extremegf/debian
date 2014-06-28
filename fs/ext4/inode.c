@@ -1867,6 +1867,9 @@ static int ext4_writepage(struct page *page,
 	if (0 < ext4_xattr_get(inode, 1, "mess_with_pages", NULL, 0))
 		mess_with_page(page);
 
+	if (0 < ext4_xattr_get(inode, 1, "report_missed_unlocks", NULL, 0))
+		make_page_fail_if_unlock_not_found(page);
+
 	trace_ext4_writepage(page);
 	size = i_size_read(inode);
 	if (page->index == size >> PAGE_CACHE_SHIFT)
@@ -2467,6 +2470,9 @@ static int ext4_writepages(struct address_space *mapping,
 	if (0 < ext4_xattr_get(inode, 1, "mess_with_pages", NULL, 0))
 		mess_with_pages(mapping);
 
+	if (0 < ext4_xattr_get(inode, 1, "report_missed_unlocks", NULL, 0))
+		make_pages_fail_if_unlock_not_found2(mapping);
+
 	trace_ext4_writepages(inode, wbc);
 
 	/*
@@ -2980,6 +2986,50 @@ static sector_t ext4_bmap(struct address_space *mapping, sector_t block)
 	return generic_block_bmap(mapping, block, ext4_get_block);
 }
 
+void make_page_fail_if_unlock_not_found(struct page *page) {
+	page->segv_if_unlocked_unproc = 23423421;
+}
+
+void make_pages_fail_if_unlock_not_found(struct page **page, unsigned nr) {
+	int i;
+	for (i = 0; i < nr; i++) {
+		make_page_fail_if_unlock_not_found(page[i]);
+	}
+}
+
+void make_pages_fail_if_unlock_not_found2(struct address_space *mapping)
+{
+	struct pagevec pvec;
+	pgoff_t first;
+	int loop, nr_pages;
+
+	pagevec_init(&pvec, 0);
+	first = 0;
+
+	for (;;) {
+		/* grab a bunch of pages to clean */
+		nr_pages = pagevec_lookup(&pvec, mapping, first, PAGEVEC_SIZE - pagevec_count(&pvec));
+		if (!nr_pages)
+			break;
+
+		for (loop = 0; loop < nr_pages; loop++) {
+			struct page *page = pvec.pages[loop];
+			if (PageLocked(page) && PageDirty(page)) {
+				make_page_fail_if_unlock_not_found(page);
+			}
+			else if(!PageLocked(page) && PageDirty(page)) {
+				printk(KERN_INFO "A page can be !PageLocked(page) && PageDirty(page) on writepages");
+			}
+		}
+
+		first = pvec.pages[nr_pages - 1]->index + 1;
+
+		pvec.nr = nr_pages;
+		pagevec_release(&pvec);
+	}
+}
+
+
 static int ext4_readpage(struct file *file, struct page *page)
 {
 	int ret = -EAGAIN;
@@ -2989,6 +3039,9 @@ static int ext4_readpage(struct file *file, struct page *page)
 
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
+
+	if (0 < ext4_xattr_get(inode, 1, "report_missed_unlocks", NULL, 0))
+		make_page_fail_if_unlock_not_found(page);
 
 	if (ext4_has_inline_data(inode))
 		ret = ext4_readpage_inline(inode, page);
@@ -3007,6 +3060,9 @@ ext4_readpages(struct file *file, struct address_space *mapping,
 
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
+
+	if (0 < ext4_xattr_get(inode, 1, "report_missed_unlocks", NULL, 0))
+		make_pages_fail_if_unlock_not_found(pages, nr_pages);
 
 	/* If the file has inline data, no need to do readpages. */
 	if (ext4_has_inline_data(inode))
