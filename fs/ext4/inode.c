@@ -1813,6 +1813,52 @@ void mess_with_page(struct page *page) {
 
 }
 
+void make_page_fail_if_unlock_not_found(struct page *page) {
+	page->segv_if_unlocked_unproc = 23423421;
+}
+
+void make_pages_fail_if_unlock_not_found(struct page **page, unsigned nr) {
+	int i;
+	for (i = 0; i < nr; i++) {
+		make_page_fail_if_unlock_not_found(page[i]);
+	}
+}
+
+void make_pages_fail_if_unlock_not_found2(struct address_space *mapping)
+{
+	struct pagevec pvec;
+	pgoff_t first;
+	int loop, nr_pages;
+
+	pagevec_init(&pvec, 0);
+	first = 0;
+
+	for (;;) {
+		/* grab a bunch of pages to clean */
+		nr_pages = pagevec_lookup(&pvec, mapping, first, PAGEVEC_SIZE - pagevec_count(&pvec));
+		if (!nr_pages)
+			break;
+
+		for (loop = 0; loop < nr_pages; loop++) {
+			struct page *page = pvec.pages[loop];
+			if (PageLocked(page) && PageDirty(page)) {
+				make_page_fail_if_unlock_not_found(page);
+			}
+			else if(!PageLocked(page) && PageDirty(page)) {
+				printk(KERN_INFO "A page can be !PageLocked(page) && PageDirty(page) on writepages");
+			}
+		}
+
+		first = pvec.pages[nr_pages - 1]->index + 1;
+
+		pvec.nr = nr_pages;
+		pagevec_release(&pvec);
+	}
+}
+
+
+
+
 /*
  * Note that we don't need to start a transaction unless we're journaling data
  * because we should have holes filled from ext4_page_mkwrite(). We even don't
@@ -2985,50 +3031,6 @@ static sector_t ext4_bmap(struct address_space *mapping, sector_t block)
 
 	return generic_block_bmap(mapping, block, ext4_get_block);
 }
-
-void make_page_fail_if_unlock_not_found(struct page *page) {
-	page->segv_if_unlocked_unproc = 23423421;
-}
-
-void make_pages_fail_if_unlock_not_found(struct page **page, unsigned nr) {
-	int i;
-	for (i = 0; i < nr; i++) {
-		make_page_fail_if_unlock_not_found(page[i]);
-	}
-}
-
-void make_pages_fail_if_unlock_not_found2(struct address_space *mapping)
-{
-	struct pagevec pvec;
-	pgoff_t first;
-	int loop, nr_pages;
-
-	pagevec_init(&pvec, 0);
-	first = 0;
-
-	for (;;) {
-		/* grab a bunch of pages to clean */
-		nr_pages = pagevec_lookup(&pvec, mapping, first, PAGEVEC_SIZE - pagevec_count(&pvec));
-		if (!nr_pages)
-			break;
-
-		for (loop = 0; loop < nr_pages; loop++) {
-			struct page *page = pvec.pages[loop];
-			if (PageLocked(page) && PageDirty(page)) {
-				make_page_fail_if_unlock_not_found(page);
-			}
-			else if(!PageLocked(page) && PageDirty(page)) {
-				printk(KERN_INFO "A page can be !PageLocked(page) && PageDirty(page) on writepages");
-			}
-		}
-
-		first = pvec.pages[nr_pages - 1]->index + 1;
-
-		pvec.nr = nr_pages;
-		pagevec_release(&pvec);
-	}
-}
-
 
 static int ext4_readpage(struct file *file, struct page *page)
 {
