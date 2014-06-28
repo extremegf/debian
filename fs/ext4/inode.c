@@ -1817,7 +1817,7 @@ void make_page_fail_if_unlock_not_found(struct page *page) {
 	page->segv_if_unlocked_unproc = 23423421;
 }
 
-void make_pages_fail_if_unlock_not_found(struct list_head **pages, unsigned nr_pages) {
+void make_pages_fail_if_unlock_not_found(struct list_head *pages, unsigned nr_pages) {
 	int page_idx;
 
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
