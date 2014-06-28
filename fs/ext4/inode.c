@@ -1822,7 +1822,7 @@ void make_pages_fail_if_unlock_not_found(struct list_head **pages, unsigned nr_p
 
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page = list_entry(pages->prev, struct page, lru);
-		pages = page->lru;
+		pages = &page->lru;
 		make_page_fail_if_unlock_not_found(page);
 	}
 
