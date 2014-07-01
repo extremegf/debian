@@ -157,8 +157,6 @@ static void ext4_finish_bio(struct bio *bio, ext4_io_end_t *io_end)
 			page = bv_page; /* There was no page masquerade */
 		} else {
 			/* Release the encrypted page */
-			BUG_ON(page != bv_page);
-			BUG_ON(page != io_end->page_switch->org_page);
 			drop_page_switch(&io_end->page_switch, page);
 		}
 		bit_spin_unlock(BH_Uptodate_Lock, &head->b_state);
