@@ -336,6 +336,7 @@ ext4_io_end_t *ext4_init_io_end(struct inode *inode, gfp_t flags)
 		io->inode = inode;
 		INIT_LIST_HEAD(&io->list);
 		atomic_set(&io->count, 1);
+		io->page_switch = NULL;
 	}
 	return io;
 }
