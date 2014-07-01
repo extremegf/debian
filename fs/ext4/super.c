@@ -5546,6 +5546,9 @@ out6:
 out7:
 	ext4_exit_es();
 
+
+	printfk(KERN_INFO "Ok, this rebuild actually worked!\n");
+
 	return err;
 }
 
