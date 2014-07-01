@@ -479,6 +479,7 @@ submit_and_retry:
 		}
 		if(printk_ratelimit()) {
 			printk(KERN_INFO "Using masquerade!\n");
+		}
 		page = page_switch->enc_page;
 	}
 
