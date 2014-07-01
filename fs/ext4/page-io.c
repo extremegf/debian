@@ -145,8 +145,13 @@ static void ext4_finish_bio(struct bio *bio, ext4_io_end_t *io_end)
 			continue;
 
 		/* If we used a page masquerade to save encrypted data we must handle
-		 * the dirty bit of the original unencrypted page in memory
+		 * the dirty bit of the original unencrypted page in memory.
+		 *
+		 * We have to do this under a lock to avoid corrupting the
+		 * page_switch list.
 		 */
+		local_irq_save(flags);
+		bit_spin_lock(BH_Uptodate_Lock, &head->b_state);
 		page = find_original_page(io_end->page_switch, bv_page);
 		if (!page) {
 			page = bv_page; /* There was no page masquerade */
@@ -156,6 +161,8 @@ static void ext4_finish_bio(struct bio *bio, ext4_io_end_t *io_end)
 			BUG_ON(page != io_end->page_switch->org_page);
 			drop_page_switch(&io_end->page_switch, page);
 		}
+		bit_spin_unlock(BH_Uptodate_Lock, &head->b_state);
+		local_irq_restore(flags);
 
 		if (error) {
 			SetPageError(page);
@@ -482,7 +489,7 @@ submit_and_retry:
 		if(printk_ratelimit()) {
 			printk(KERN_INFO "Using masquerade!\n");
 		}
-		page = page_switch->org_page; // TODO: Tutaj maskarada jest praktycznie wylaczona.
+		page = page_switch->enc_page;
 	}
 
 	ret = bio_add_page(io->io_bio, page, bh->b_size, bh_offset(bh));
