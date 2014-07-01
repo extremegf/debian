@@ -341,7 +341,7 @@ ext4_io_end_t *ext4_init_io_end(struct inode *inode, gfp_t flags)
 		INIT_LIST_HEAD(&io->list);
 		atomic_set(&io->count, 1);
 		io->page_switch = NULL;
-		io->ps_lock = SPIN_LOCK_UNLOCKED;
+		spin_lock_init(&io->ps_lock);
 	}
 	return io;
 }
