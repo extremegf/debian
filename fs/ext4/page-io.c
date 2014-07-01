@@ -55,12 +55,12 @@ static struct page_switch *get_page_switch(struct page_switch **head, struct pag
 	/* Page was not allocated yet */
 	p = kmalloc(sizeof(struct page_switch), GFP_KERNEL);
 	if (!p)
-		return -ENOMEM;
+		return NULL;
 
 	p->enc_page = alloc_page(GFP_KERNEL | __GFP_HIGHMEM);
 	if (!p->enc_page) {
 		kfree(p);
-		return -ENOMEM;
+		return NULL;
 	}
 
 	p->org_page = org_page;
@@ -74,7 +74,7 @@ static struct page_switch *get_page_switch(struct page_switch **head, struct pag
 
 static struct page* find_original_page(struct page_switch *head, struct page* enc_page) {
 	struct page_switch *p;
-	for(p = *head; p != NULL; p = p->next_switch) {
+	for(p = head; p != NULL; p = p->next_switch) {
 		if (p->enc_page == enc_page) {
 			return p->org_page;
 		}
