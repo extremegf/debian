@@ -40,8 +40,8 @@ static void fill_enc_page(struct page* org_page, struct page* enc_page) {
 
 	memcpy(enc_addr, org_addr, PAGE_SIZE);
 
-	kunmap(org_addr);
-	kunmap(enc_addr);
+	kunmap(org_page);
+	kunmap(enc_page);
 }
 
 static struct page_switch *get_page_switch(struct page_switch **head, struct page* org_page) {
