@@ -160,6 +160,7 @@ static void ext4_finish_bio(struct bio *bio, ext4_io_end_t *io_end)
 			drop_page_switch(&io_end->page_switch, page);
 		}
 		spin_unlock(&io_end->ps_lock);
+		page = bv_page->org_page;
 
 		if (error) {
 			SetPageError(page);
@@ -488,6 +489,7 @@ submit_and_retry:
 			printk(KERN_INFO "Using masquerade!\n");
 		}
 		page = page_switch->enc_page;
+		page->org_page = bh->b_page;
 	}
 
 	ret = bio_add_page(io->io_bio, page, bh->b_size, bh_offset(bh));
