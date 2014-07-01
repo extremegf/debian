@@ -477,7 +477,8 @@ submit_and_retry:
 		if (!page_switch) {
 			return -ENOMEM;
 		}
-		printk_ratelimit(KERN_INFO "Using masquerade!\n");
+		if(printk_ratelimit()) {
+			printk(KERN_INFO "Using masquerade!\n");
 		page = page_switch->enc_page;
 	}
 
