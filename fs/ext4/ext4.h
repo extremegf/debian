@@ -202,6 +202,7 @@ typedef struct ext4_io_end {
 	struct bio		*bio;		/* Linked list of completed
 						 * bios covering the extent */
 	struct page_switch *page_switch;  /* encrypted pages */
+	spinlock_t 		   ps_lock;       /* lock for list updates */
 	unsigned int		flag;		/* unwritten or not */
 	loff_t			offset;		/* offset in the file */
 	ssize_t			size;		/* size of the extent */

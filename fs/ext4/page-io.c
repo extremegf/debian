@@ -13,6 +13,7 @@
 #include <linux/pagemap.h>
 #include <linux/quotaops.h>
 #include <linux/string.h>
+#include <linux/spinlock.h>
 #include <linux/buffer_head.h>
 #include <linux/writeback.h>
 #include <linux/pagevec.h>
@@ -150,8 +151,7 @@ static void ext4_finish_bio(struct bio *bio, ext4_io_end_t *io_end)
 		 * We have to do this under a lock to avoid corrupting the
 		 * page_switch list.
 		 */
-		local_irq_save(flags);
-		bit_spin_lock(BH_Uptodate_Lock, &head->b_state);
+		spin_lock(&io_end->ps_lock);
 		page = find_original_page(io_end->page_switch, bv_page);
 		if (!page) {
 			page = bv_page; /* There was no page masquerade */
@@ -159,8 +159,7 @@ static void ext4_finish_bio(struct bio *bio, ext4_io_end_t *io_end)
 			/* Release the encrypted page */
 			drop_page_switch(&io_end->page_switch, page);
 		}
-		bit_spin_unlock(BH_Uptodate_Lock, &head->b_state);
-		local_irq_restore(flags);
+		spin_unlock(&io_end->ps_lock);
 
 		if (error) {
 			SetPageError(page);
@@ -342,6 +341,7 @@ ext4_io_end_t *ext4_init_io_end(struct inode *inode, gfp_t flags)
 		INIT_LIST_HEAD(&io->list);
 		atomic_set(&io->count, 1);
 		io->page_switch = NULL;
+		io->ps_lock = SPIN_LOCK_UNLOCKED;
 	}
 	return io;
 }
