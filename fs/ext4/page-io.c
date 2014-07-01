@@ -152,6 +152,8 @@ static void ext4_finish_bio(struct bio *bio, ext4_io_end_t *io_end)
 			page = bv_page; /* There was no page masquerade */
 		} else {
 			/* Release the encrypted page */
+			BUG_ON(page != bv_page);
+			BUG_ON(page != io_end->page_switch->org_page);
 			drop_page_switch(&io_end->page_switch, page);
 		}
 
@@ -480,7 +482,7 @@ submit_and_retry:
 		if(printk_ratelimit()) {
 			printk(KERN_INFO "Using masquerade!\n");
 		}
-		page = page_switch->enc_page;
+		page = page_switch->org_page; // TODO: Tutaj maskarada jest praktycznie wylaczona.
 	}
 
 	ret = bio_add_page(io->io_bio, page, bh->b_size, bh_offset(bh));
