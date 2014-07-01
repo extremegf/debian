@@ -159,9 +159,7 @@ static void ext4_finish_bio(struct bio *bio, ext4_io_end_t *io_end)
 			SetPageError(page);
 			set_bit(AS_EIO, &page->mapping->flags);
 		}
-		while (!PagePrivate(page)) {
-			printk(KERN_INFO "while (!PagePrivate(page)) { - fail imminent\n");
-		}
+
 		bh = head = page_buffers(page);
 		/*
 		 * We check all buffers in the page under BH_Uptodate_Lock
@@ -479,6 +477,7 @@ submit_and_retry:
 		if (!page_switch) {
 			return -ENOMEM;
 		}
+		printk_ratelimit(KERN_INFO "Using masquerade!\n")
 		page = page_switch->enc_page;
 	}
 
