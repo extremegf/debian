@@ -33,6 +33,71 @@
 
 static struct kmem_cache *io_end_cachep;
 
+static void fill_enc_page(struct page* org_page, struct page* enc_page) {
+	char *org_addr, *enc_addr;
+	org_addr = kmap(org_page);
+	enc_addr = kmap(enc_page);
+
+	memcpy(enc_addr, org_addr, PAGE_SIZE);
+
+	kunmap(org_addr);
+	kunmap(enc_addr);
+}
+
+static struct page_switch *get_page_switch(struct page_switch **head, struct page* org_page) {
+	struct page_switch *p;
+	for(p = *head; p != NULL; p = p->next_switch) {
+		if (p->org_page == org_page) {
+			return p;
+		}
+	}
+
+	/* Page was not allocated yet */
+	p = kmalloc(sizeof(struct page_switch), GFP_KERNEL);
+	if (!p)
+		return -ENOMEM;
+
+	p->enc_page = alloc_page(GFP_KERNEL | __GFP_HIGHMEM);
+	if (!p->enc_page) {
+		kfree(p);
+		return -ENOMEM;
+	}
+
+	p->org_page = org_page;
+	p->next_switch = *head;
+	*head = p;
+
+	fill_enc_page(p->org_page, p->enc_page);
+
+	return p;
+}
+
+static struct page* find_original_page(struct page_switch *head, struct page* enc_page) {
+	struct page_switch *p;
+	for(p = *head; p != NULL; p = p->next_switch) {
+		if (p->enc_page == enc_page) {
+			return p->org_page;
+		}
+	}
+	return NULL;
+}
+
+static void drop_page_switch(struct page_switch **head, struct page* org_page) {
+	struct page_switch *p, **pp_prev;
+	for(pp_prev = head, p = *head; p != NULL; p = p->next_switch, pp_prev = &p->next_switch) {
+		if (p->org_page == org_page) {
+			__free_page(p->enc_page);
+			p->enc_page = NULL;
+
+			*pp_prev = p->next_switch;
+			kfree(p);
+
+			return;
+		}
+	}
+	BUG(); /* We must always find and drop the page */
+}
+
 int __init ext4_init_pageio(void)
 {
 	io_end_cachep = KMEM_CACHE(ext4_io_end, SLAB_RECLAIM_ACCOUNT);
@@ -61,22 +126,34 @@ static void buffer_io_error(struct buffer_head *bh)
 			(unsigned long long)bh->b_blocknr);
 }
 
-static void ext4_finish_bio(struct bio *bio)
+static void ext4_finish_bio(struct bio *bio, ext4_io_end_t *io_end)
 {
 	int i;
 	int error = !test_bit(BIO_UPTODATE, &bio->bi_flags);
 
 	for (i = 0; i < bio->bi_vcnt; i++) {
 		struct bio_vec *bvec = &bio->bi_io_vec[i];
-		struct page *page = bvec->bv_page;
+		struct page *bv_page = bvec->bv_page;
+		struct page *page;
 		struct buffer_head *bh, *head;
 		unsigned bio_start = bvec->bv_offset;
 		unsigned bio_end = bio_start + bvec->bv_len;
 		unsigned under_io = 0;
 		unsigned long flags;
 
-		if (!page)
+		if (!bv_page)
 			continue;
+
+		/* If we used a page masquerade to save encrypted data we must handle
+		 * the dirty bit of the original unencrypted page in memory
+		 */
+		page = find_original_page(io_end->page_switch, bv_page);
+		if (!page) {
+			page = bv_page; /* There was no page masquerade */
+		} else {
+			/* Release the encrypted page */
+			drop_page_switch(&io_end->page_switch, page);
+		}
 
 		if (error) {
 			SetPageError(page);
@@ -120,7 +197,7 @@ static void ext4_release_io_end(ext4_io_end_t *io_end)
 
 	for (bio = io_end->bio; bio; bio = next_bio) {
 		next_bio = bio->bi_private;
-		ext4_finish_bio(bio);
+		ext4_finish_bio(bio, io_end);
 		bio_put(bio);
 	}
 	kmem_cache_free(io_end_cachep, io_end);
@@ -326,12 +403,8 @@ static void ext4_end_bio(struct bio *bio, int error)
 		bio->bi_private = xchg(&io_end->bio, bio);
 		ext4_put_io_end_defer(io_end);
 	} else {
-		/*
-		 * Drop io_end reference early. Inode can get freed once
-		 * we finish the bio.
-		 */
+		ext4_finish_bio(bio, io_end);
 		ext4_put_io_end_defer(io_end);
-		ext4_finish_bio(bio);
 		bio_put(bio);
 	}
 }
@@ -380,6 +453,7 @@ static int io_submit_add_bh(struct ext4_io_submit *io,
 			    struct buffer_head *bh)
 {
 	int ret;
+	struct page *page;
 
 	if (io->io_bio && bh->b_blocknr != io->io_next_block) {
 submit_and_retry:
@@ -390,7 +464,21 @@ submit_and_retry:
 		if (ret)
 			return ret;
 	}
-	ret = bio_add_page(io->io_bio, bh->b_page, bh->b_size, bh_offset(bh));
+
+	/*
+	 * We may encrypt the page before write. Changing page in place
+	 * would break mmap, so we need to get a new page and use it instead.
+	 */
+	page = bh->b_page;
+	if (1 /* let's masquerade all pages! */ ) {
+		struct page_switch *page_switch = get_page_switch(&io->io_end->page_switch, page);
+		if (!page_switch) {
+			return -ENOMEM;
+		}
+		page = page_switch->enc_page;
+	}
+
+	ret = bio_add_page(io->io_bio, page, bh->b_size, bh_offset(bh));
 	if (ret != bh->b_size)
 		goto submit_and_retry;
 	io->io_next_block++;

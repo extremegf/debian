@@ -183,6 +183,14 @@ struct ext4_map_blocks {
 #define	EXT4_IO_END_UNWRITTEN	0x0001
 
 /*
+ * Holds the page masquerade needed for writeback of encrypted pages.
+ */
+struct page_switch {
+	struct page *org_page, *enc_page;
+	struct page_switch *next_switch;
+};
+
+/*
  * For converting uninitialized extents on a work queue. 'handle' is used for
  * buffered writeback.
  */
@@ -193,6 +201,7 @@ typedef struct ext4_io_end {
 	struct inode		*inode;		/* file being written to */
 	struct bio		*bio;		/* Linked list of completed
 						 * bios covering the extent */
+	struct page_switch *page_switch;  /* encrypted pages */
 	unsigned int		flag;		/* unwritten or not */
 	loff_t			offset;		/* offset in the file */
 	ssize_t			size;		/* size of the extent */
