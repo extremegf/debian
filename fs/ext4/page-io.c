@@ -77,16 +77,16 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 		if (p->org_page == org_page) {
 			p->get_cnt += 1;
             spin_unlock_irqrestore(&page_switch_lock, flags);
-			return p;
+        	if(max_seen_page_switches_len < len) {
+        		max_seen_page_switches_len = len;
+        	}
+            if(printk_ratelimit()) {
+                 printk(KERN_INFO "Using masquerade! List len = %d max_seen=%d\n", len, max_seen_page_switches_len);
+            }
+            return p;
 		}
         len += 1;
 	}
-	if(max_seen_page_switches_len < len) {
-		max_seen_page_switches_len = len;
-	}
-    if(printk_ratelimit()) {
-         printk(KERN_INFO "Using masquerade! List len = %d max_seen=%d\n", len, max_seen_page_switches_len);
-    }
 	spin_unlock_irqrestore(&page_switch_lock, flags);
 
 	/* Page was not allocated yet */
