@@ -56,6 +56,7 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 	struct page_switch *p;
 	struct list_head *pos;
 	unsigned long flags;
+	int len = 0;
 
 	spin_lock_irqsave(&page_switch_lock, flags);
 	list_for_each(pos, &page_switches){
@@ -65,7 +66,11 @@ static struct page_switch *get_page_switch(struct page* org_page) {
             spin_unlock_irqrestore(&page_switch_lock, flags);
 			return p;
 		}
+        len += 1;
 	}
+    if(printk_ratelimit()) {
+            printk(KERN_INFO "Using masquerade! List len = %d\n", len);
+    }
 	spin_unlock_irqrestore(&page_switch_lock, flags);
 
 	/* Page was not allocated yet */
@@ -497,9 +502,6 @@ submit_and_retry:
 		struct page_switch *page_switch = get_page_switch(page);
 		if (!page_switch) {
 			return -ENOMEM;
-		}
-		if(printk_ratelimit()) {
-			printk(KERN_INFO "Using masquerade!\n");
 		}
 		page = page_switch->enc_page;
 	}
