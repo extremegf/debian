@@ -347,6 +347,14 @@ static inline int trylock_page(struct page *page)
  */
 static inline void lock_page(struct page *page)
 {
+	if (page->notify_about_unlock == 23423421) {
+		page->notify_about_unlock = 0;
+
+		if (printk_ratelimit()) {
+			printk(KERN_INFO "Page lock after ext4_readpage/s at:\n");
+			dump_stack();
+		}
+	}
 	might_sleep();
 	if (!trylock_page(page))
 		__lock_page(page);
