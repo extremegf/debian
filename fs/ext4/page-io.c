@@ -36,7 +36,7 @@
 
 static struct kmem_cache *io_end_cachep;
 
-#define PS_HASH_BUCKET_BITS 10
+#define PS_HASH_BUCKET_BITS 6
 #define PS_HASH_BUCKETS (1 << PS_HASH_BUCKET_BITS)
 
 /* I realize how inefficient this data structure is!
