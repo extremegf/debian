@@ -67,7 +67,6 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 	struct page_switch *p;
 	struct list_head *pos;
 	unsigned long flags;
-	int len = 0, max_seen_page_switches_len = 0;
 	unsigned long o2e_bucket = hash_ptr(org_page, PS_HASH_BUCKET_BITS);
 	unsigned long e2o_bucket;
 
@@ -77,15 +76,9 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 		if (p->org_page == org_page) {
 			p->get_cnt += 1;
             spin_unlock_irqrestore(&page_switch_lock, flags);
-        	if(max_seen_page_switches_len < len) {
-        		max_seen_page_switches_len = len;
-        	}
-            if(printk_ratelimit()) {
-                 printk(KERN_INFO "Using masquerade! List len = %d max_seen=%d\n", len, max_seen_page_switches_len);
-            }
+
             return p;
 		}
-        len += 1;
 	}
 	spin_unlock_irqrestore(&page_switch_lock, flags);
 
@@ -118,10 +111,12 @@ static struct page* find_org_and_put_enc_page(struct page* enc_page) {
 	struct list_head *pos;
 	unsigned long flags;
 	unsigned long e2o_bucket = hash_ptr(enc_page, PS_HASH_BUCKET_BITS);
+	int len = 0, max_seen_page_switches_len = 0;
 
 	spin_lock_irqsave(&page_switch_lock, flags);
 	list_for_each(pos, &enc_to_org_hashtab[e2o_bucket]){
 		p = list_entry(pos, struct page_switch, enc_to_org_bucket);
+        len += 1;
 		if (p->enc_page == enc_page)  {
 			struct page *org_page = p->org_page;
 
@@ -136,6 +131,14 @@ static struct page* find_org_and_put_enc_page(struct page* enc_page) {
 				kfree(p);
 			}
             spin_unlock_irqrestore(&page_switch_lock, flags);
+
+        	if(max_seen_page_switches_len < len) {
+        		max_seen_page_switches_len = len;
+        	}
+            if(printk_ratelimit()) {
+                 printk(KERN_INFO "Using masquerade! List len = %d max_seen=%d\n", len, max_seen_page_switches_len);
+            }
+
 			return org_page;
 		}
 	}
