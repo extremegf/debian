@@ -48,7 +48,8 @@
 
 #define MPAGE_DA_EXTENT_TAIL 0x01
 
-#define VERSIONEXT4 "EXT4 modifications, v1.5\n"
+#define SHOW_BUILD_VERSION
+// #define SHOW_BUILD_VERSION printk_ratelimited(KERN_INFO "EXT4 modifications, v1.5\n");
 
 static __u32 ext4_inode_csum(struct inode *inode, struct ext4_inode *raw,
 			      struct ext4_inode_info *ei)
@@ -1866,7 +1867,7 @@ static int ext4_writepage(struct page *page,
 	struct inode *inode = page->mapping->host;
 	struct ext4_io_submit io_submit;
 
-	printk_ratelimited(KERN_INFO VERSIONEXT4);
+	SHOW_BUILD_VERSION
 	if (0 < ext4_xattr_get(inode, 1, "mess_with_pages", NULL, 0))
 		mess_with_page(page);
 
@@ -2467,7 +2468,7 @@ static int ext4_writepages(struct address_space *mapping,
 	struct blk_plug plug;
 	bool give_up_on_write = false;
 
-	printk_ratelimited(KERN_INFO VERSIONEXT4);
+	SHOW_BUILD_VERSION
 
 	if (0 < ext4_xattr_get(inode, 1, "mess_with_pages", NULL, 0))
 		mess_with_pages(mapping);
@@ -2995,7 +2996,7 @@ static int ext4_readpage(struct file *file, struct page *page)
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
-	printk_ratelimited(KERN_INFO VERSIONEXT4);
+	SHOW_BUILD_VERSION
 
 	if (ext4_has_inline_data(inode))
 		ret = ext4_readpage_inline(inode, page);
@@ -3015,7 +3016,7 @@ ext4_readpages(struct file *file, struct address_space *mapping,
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
-	printk_ratelimited(KERN_INFO VERSIONEXT4);
+	SHOW_BUILD_VERSION
 
 	/* If the file has inline data, no need to do readpages. */
 	if (ext4_has_inline_data(inode))

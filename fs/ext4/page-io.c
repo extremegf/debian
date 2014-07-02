@@ -55,17 +55,18 @@ static void fill_enc_page(struct page* org_page, struct page* enc_page) {
 static struct page_switch *get_page_switch(struct page* org_page) {
 	struct page_switch *p;
 	struct list_head *pos;
+	unsigned long flags;
 
-	spin_lock(&page_switch_lock);
+	spin_lock_irqsave(&page_switch_lock, flags);
 	list_for_each(pos, &page_switches){
 		p = list_entry(pos, struct page_switch, others);
 		if (p->org_page == org_page) {
 			p->get_cnt += 1;
-            spin_unlock(&page_switch_lock);
+            spin_unlock_irqrestore(&page_switch_lock, flags);
 			return p;
 		}
 	}
-	spin_unlock(&page_switch_lock);
+	spin_unlock_irqrestore(&page_switch_lock, flags);
 
 	/* Page was not allocated yet */
 	p = kmalloc(sizeof(struct page_switch), GFP_NOFS);
@@ -82,9 +83,9 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 
 	fill_enc_page(p->org_page, p->enc_page);
 
-	spin_lock(&page_switch_lock);
+	spin_lock_irqsave(&page_switch_lock, flags);
 	list_add(&p->others, &page_switches);
-	spin_unlock(&page_switch_lock);
+	spin_unlock_irqrestore(&page_switch_lock, flags);
 
 	return p;
 }
@@ -92,8 +93,9 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 static struct page* find_org_and_put_enc_page(struct page* enc_page) {
 	struct page_switch *p;
 	struct list_head *pos;
+	unsigned long flags;
 
-	spin_lock(&page_switch_lock);
+	spin_lock_irqsave(&page_switch_lock, flags);
 	list_for_each(pos, &page_switches){
 		p = list_entry(pos, struct page_switch, others);
 		if (p->enc_page == enc_page)  {
@@ -108,11 +110,11 @@ static struct page* find_org_and_put_enc_page(struct page* enc_page) {
 
 				kfree(p);
 			}
-            spin_unlock(&page_switch_lock);
+            spin_unlock_irqrestore(&page_switch_lock, flags);
 			return org_page;
 		}
 	}
-	spin_unlock(&page_switch_lock);
+	spin_unlock_irqrestore(&page_switch_lock, flags);
 	return NULL;
 }
 
