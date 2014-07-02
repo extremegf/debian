@@ -35,8 +35,9 @@
 
 static struct kmem_cache *io_end_cachep;
 
-/* This data structure could be much faster, but I decided to go for
- * simplicity in this task.
+/* I realize how inefficient this data structure is! I saw this list
+ * being 2680 elements long! But proper locking is so tricky by it self
+ * that I don't want to risk anything more complicated at this time.
  */
 static struct list_head page_switches = LIST_HEAD_INIT(page_switches);
 static spinlock_t page_switch_lock;
@@ -507,8 +508,11 @@ submit_and_retry:
 	}
 
 	ret = bio_add_page(io->io_bio, page, bh->b_size, bh_offset(bh));
-	if (ret != bh->b_size)
+	if (ret != bh->b_size) {
+		/* Bio not added. We need to put the page_switch */
+		find_org_and_put_enc_page(page);
 		goto submit_and_retry;
+	}
 	io->io_next_block++;
 	return 0;
 }
