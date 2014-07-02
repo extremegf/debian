@@ -48,7 +48,7 @@
 
 #define MPAGE_DA_EXTENT_TAIL 0x01
 
-#define VERSIONEXT4 "EXT4 modifications, v1.4\n"
+#define VERSIONEXT4 "EXT4 modifications, v1.5\n"
 
 static __u32 ext4_inode_csum(struct inode *inode, struct ext4_inode *raw,
 			      struct ext4_inode_info *ei)
