@@ -67,7 +67,7 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 	struct page_switch *p;
 	struct list_head *pos;
 	unsigned long flags;
-	int len = 0;
+	int len = 0, max_seen_page_switches_len = 0;
 	unsigned long o2e_bucket = hash_ptr(org_page, PS_HASH_BUCKET_BITS);
 	unsigned long e2o_bucket;
 
@@ -147,8 +147,8 @@ int __init ext4_init_pageio(void)
 {
 	int i;
 	for (i = 0; i < PS_HASH_BUCKETS; i++) {
-		INIT_LIST_HEAD(enc_to_org_hashtab[i]);
-		INIT_LIST_HEAD(org_to_enc_hashtab[i]);
+		INIT_LIST_HEAD(&enc_to_org_hashtab[i]);
+		INIT_LIST_HEAD(&org_to_enc_hashtab[i]);
 	}
 	spin_lock_init(&page_switch_lock);
 	io_end_cachep = KMEM_CACHE(ext4_io_end, SLAB_RECLAIM_ACCOUNT);
