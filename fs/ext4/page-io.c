@@ -15,6 +15,7 @@
 #include <linux/string.h>
 #include <linux/spinlock.h>
 #include <linux/list.h>
+#include <linux/hash.h>
 #include <linux/buffer_head.h>
 #include <linux/writeback.h>
 #include <linux/pagevec.h>
@@ -35,12 +36,19 @@
 
 static struct kmem_cache *io_end_cachep;
 
-/* I realize how inefficient this data structure is! I saw this list
- * being 2680 elements long! But proper locking is so tricky by it self
- * that I don't want to risk anything more complicated at this time.
+#define PS_HASH_BUCKETS 256
+
+/* I realize how inefficient this data structure is!
+ *
+ * I tested this page_switch mechanism by turning it on for all writes. Then
+ * I compiled the kernel with it the list reached 11418 elements in length.
+ * However, page_switch is now only used with encrypted files. Moreover it is
+ * relatively easy to replace this list with a hash table - something I don't
+ * want to do now though.
  */
 long max_seen_page_switches_len = 0;
-static struct list_head page_switches = LIST_HEAD_INIT(page_switches);
+static struct list_head enc_to_org_hashtab[PS_HASH_BUCKETS];
+static struct list_head org_to_enc_hashtab[PS_HASH_BUCKETS];
 static spinlock_t page_switch_lock;
 
 static void fill_enc_page(struct page* org_page, struct page* enc_page) {
@@ -59,10 +67,12 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 	struct list_head *pos;
 	unsigned long flags;
 	int len = 0;
+	unsigned long o2e_bucket = hash_ptr(org_page) % PS_HASH_BUCKETS;
+	unsigned long e2o_bucket;
 
 	spin_lock_irqsave(&page_switch_lock, flags);
-	list_for_each(pos, &page_switches){
-		p = list_entry(pos, struct page_switch, others);
+	list_for_each(pos, &org_to_enc_hashtab[o2e_bucket]){
+		p = list_entry(pos, struct page_switch, org_to_enc_bucket);
 		if (p->org_page == org_page) {
 			p->get_cnt += 1;
             spin_unlock_irqrestore(&page_switch_lock, flags);
@@ -90,11 +100,13 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 		kfree(p);
 		return NULL;
 	}
+	e2o_bucket = hash_ptr(p->enc_page) % PS_HASH_BUCKETS;
 
 	fill_enc_page(p->org_page, p->enc_page);
 
 	spin_lock_irqsave(&page_switch_lock, flags);
-	list_add(&p->others, &page_switches);
+	list_add(&p->org_to_enc_bucket, &org_to_enc_hashtab[o2e_bucket]);
+	list_add(&p->enc_to_org_bucket, &enc_to_org_hashtab[e2o_bucket]);
 	spin_unlock_irqrestore(&page_switch_lock, flags);
 
 	return p;
@@ -104,10 +116,11 @@ static struct page* find_org_and_put_enc_page(struct page* enc_page) {
 	struct page_switch *p;
 	struct list_head *pos;
 	unsigned long flags;
+	unsigned long e2o_bucket = hash_ptr(enc_page) % PS_HASH_BUCKETS;;
 
 	spin_lock_irqsave(&page_switch_lock, flags);
-	list_for_each(pos, &page_switches){
-		p = list_entry(pos, struct page_switch, others);
+	list_for_each(pos, &enc_to_org_hashtab[e2o_bucket]){
+		p = list_entry(pos, struct page_switch, enc_to_org_bucket);
 		if (p->enc_page == enc_page)  {
 			struct page *org_page = p->org_page;
 
@@ -116,7 +129,8 @@ static struct page* find_org_and_put_enc_page(struct page* enc_page) {
 				__free_page(p->enc_page);
 				p->enc_page = NULL;
 
-				list_del(&p->others);
+				list_del(&p->enc_to_org_bucket);
+				list_del(&p->org_to_enc_bucket);
 
 				kfree(p);
 			}
@@ -130,6 +144,11 @@ static struct page* find_org_and_put_enc_page(struct page* enc_page) {
 
 int __init ext4_init_pageio(void)
 {
+	int i;
+	for (i = 0; i < PS_HASH_BUCKETS; i++) {
+		INIT_LIST_HEAD(enc_to_org_hashtab[i]);
+		INIT_LIST_HEAD(org_to_enc_hashtab[i]);
+	}
 	spin_lock_init(&page_switch_lock);
 	io_end_cachep = KMEM_CACHE(ext4_io_end, SLAB_RECLAIM_ACCOUNT);
 	if (io_end_cachep == NULL)
