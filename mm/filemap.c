@@ -607,6 +607,14 @@ EXPORT_SYMBOL_GPL(add_page_wait_queue);
  */
 void unlock_page(struct page *page)
 {
+	if (page->notify_about_unlock == 23423421) {
+		page->notify_about_unlock = 0;
+
+		if (printk_ratelimit()) {
+			printk(KERN_INFO "Page unlock after ext4_readpage/s\n");
+			dump_stack();
+		}
+	}
 	VM_BUG_ON(!PageLocked(page));
 	clear_bit_unlock(PG_locked, &page->flags);
 	smp_mb__after_clear_bit();

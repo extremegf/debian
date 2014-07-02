@@ -166,6 +166,8 @@ struct page {
 		struct page *first_page;	/* Compound tail pages */
 	};
 
+	unsigned long notify_about_unlock; // Notify on magic value 23423421
+
 	/*
 	 * On machines where all RAM is mapped into kernel address space,
 	 * we can simply calculate the virtual address. On machines with

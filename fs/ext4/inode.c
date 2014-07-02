@@ -51,6 +51,21 @@
 #define SHOW_BUILD_VERSION
 // #define SHOW_BUILD_VERSION printk_ratelimited(KERN_INFO "EXT4 modifications, v1.5\n");
 
+void notify_on_page_unlock(struct page *page) {
+	BUG_ON(!PageLocked(page));
+	page->notify_about_unlock = 23423421;
+}
+
+void notify_on_pages_unlocks(struct list_head *pages, unsigned nr_pages) {
+	int page_idx;
+
+	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
+		struct page *page = list_entry(pages->prev, struct page, lru);
+		pages = &page->lru;
+		notify_on_page_unlock(page);
+	}
+}
+
 static __u32 ext4_inode_csum(struct inode *inode, struct ext4_inode *raw,
 			      struct ext4_inode_info *ei)
 {
@@ -2995,6 +3010,8 @@ static int ext4_readpage(struct file *file, struct page *page)
 
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
+
+	notify_on_page_unlock(page)
 
 	SHOW_BUILD_VERSION
 
