@@ -104,7 +104,7 @@ static struct page* find_org_and_put_enc_page(struct page* enc_page) {
 				__free_page(p->enc_page);
 				p->enc_page = NULL;
 
-				list_del(p->others);
+				list_del(&p->others);
 
 				kfree(p);
 			}
