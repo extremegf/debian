@@ -3008,6 +3008,8 @@ ext4_readpages(struct file *file, struct address_space *mapping,
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
+	printk_ratelimited(KERN_INFO "EXT4 modifications, v1.0\n");
+
 	/* If the file has inline data, no need to do readpages. */
 	if (ext4_has_inline_data(inode))
 		return 0;
