@@ -74,7 +74,7 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 		max_seen_page_switches_len = len;
 	}
     if(printk_ratelimit()) {
-            printk(KERN_INFO "Using masquerade! List len = %d\n, max_seen=%d", len, max_seen_page_switches_len);
+            printk(KERN_INFO "Using masquerade! List len = %d max_seen=%d\n", len, max_seen_page_switches_len);
     }
 	spin_unlock_irqrestore(&page_switch_lock, flags);
 
