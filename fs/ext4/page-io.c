@@ -13,6 +13,8 @@
 #include <linux/pagemap.h>
 #include <linux/quotaops.h>
 #include <linux/string.h>
+#include <linux/spinlock.h>
+#include <linux/list.h>
 #include <linux/buffer_head.h>
 #include <linux/writeback.h>
 #include <linux/pagevec.h>
@@ -33,8 +35,90 @@
 
 static struct kmem_cache *io_end_cachep;
 
+/* This data structure could be much faster, but I decided to go for
+ * simplicity in this task.
+ */
+static struct list_head page_switches = LIST_HEAD_INIT(page_switches);
+static spinlock_t page_switch_lock;
+
+static void fill_enc_page(struct page* org_page, struct page* enc_page) {
+	char *org_addr, *enc_addr;
+	org_addr = kmap(org_page);
+	enc_addr = kmap(enc_page);
+
+	memcpy(enc_addr, org_addr, PAGE_SIZE);
+
+	kunmap(org_page);
+	kunmap(enc_page);
+}
+
+static struct page_switch *get_page_switch(struct page* org_page) {
+	struct page_switch *p;
+	struct list_head *pos;
+
+	spin_lock(&page_switch_lock);
+	list_for_each(pos, &page_switches){
+		p = list_entry(pos, struct page_switch, others);
+		if (p->org_page == org_page) {
+			p->get_cnt += 1;
+            spin_unlock(&page_switch_lock);
+			return p;
+		}
+	}
+	spin_unlock(&page_switch_lock);
+
+	/* Page was not allocated yet */
+	p = kmalloc(sizeof(struct page_switch), GFP_NOFS);
+	if (!p)
+		return NULL;
+
+	p->get_cnt = 1;
+	p->org_page = org_page;
+	p->enc_page = alloc_page(GFP_NOFS | __GFP_HIGHMEM);
+	if (!p->enc_page) {
+		kfree(p);
+		return NULL;
+	}
+
+	fill_enc_page(p->org_page, p->enc_page);
+
+	spin_lock(&page_switch_lock);
+	list_add(&p->others, &page_switches);
+	spin_unlock(&page_switch_lock);
+
+	return p;
+}
+
+static struct page* find_org_and_put_enc_page(struct page* enc_page) {
+	struct page_switch *p;
+	struct list_head *pos;
+
+	spin_lock(&page_switch_lock);
+	list_for_each(pos, &page_switches){
+		p = list_entry(pos, struct page_switch, others);
+		if (p->enc_page == enc_page)  {
+			struct page *org_page = p->org_page;
+
+			p->get_cnt -= 1;
+			if (p->get_cnt == 0) {
+				__free_page(p->enc_page);
+				p->enc_page = NULL;
+
+				list_del(p->others);
+
+				kfree(p);
+			}
+            spin_unlock(&page_switch_lock);
+			return org_page;
+		}
+	}
+	spin_unlock(&page_switch_lock);
+	return NULL;
+}
+
 int __init ext4_init_pageio(void)
 {
+	spin_lock_init(&page_switch_lock);
 	io_end_cachep = KMEM_CACHE(ext4_io_end, SLAB_RECLAIM_ACCOUNT);
 	if (io_end_cachep == NULL)
 		return -ENOMEM;
@@ -68,15 +152,24 @@ static void ext4_finish_bio(struct bio *bio)
 
 	for (i = 0; i < bio->bi_vcnt; i++) {
 		struct bio_vec *bvec = &bio->bi_io_vec[i];
-		struct page *page = bvec->bv_page;
+		struct page *org_or_enc_page = bvec->bv_page;
+		struct page *page;
 		struct buffer_head *bh, *head;
 		unsigned bio_start = bvec->bv_offset;
 		unsigned bio_end = bio_start + bvec->bv_len;
 		unsigned under_io = 0;
 		unsigned long flags;
 
-		if (!page)
+		if (!org_or_enc_page)
 			continue;
+
+		/* If we used a page switch to save encrypted data we must handle
+		 * the dirty bit of the original unencrypted page in memory.
+		 */
+		page = find_org_and_put_enc_page(org_or_enc_page);
+		if (!page) {
+			page = org_or_enc_page; /* There was no page switch */
+		}
 
 		if (error) {
 			SetPageError(page);
@@ -380,6 +473,7 @@ static int io_submit_add_bh(struct ext4_io_submit *io,
 			    struct buffer_head *bh)
 {
 	int ret;
+	struct page *page;
 
 	if (io->io_bio && bh->b_blocknr != io->io_next_block) {
 submit_and_retry:
@@ -390,7 +484,25 @@ submit_and_retry:
 		if (ret)
 			return ret;
 	}
-	ret = bio_add_page(io->io_bio, bh->b_page, bh->b_size, bh_offset(bh));
+
+	/*
+	 * We may encrypt the page before write. Changing page in place
+	 * would break mmap, so we need to get a new page and use it instead.
+	 */
+	page = bh->b_page;
+
+	if (1 /* let's masquerade all pages! */ ) {
+		struct page_switch *page_switch = get_page_switch(page);
+		if (!page_switch) {
+			return -ENOMEM;
+		}
+		if(printk_ratelimit()) {
+			printk(KERN_INFO "Using masquerade!\n");
+		}
+		page = page_switch->enc_page;
+	}
+
+	ret = bio_add_page(io->io_bio, page, bh->b_size, bh_offset(bh));
 	if (ret != bh->b_size)
 		goto submit_and_retry;
 	io->io_next_block++;

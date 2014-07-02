@@ -177,6 +177,13 @@ struct ext4_map_blocks {
 	unsigned int m_flags;
 };
 
+struct page_switch {
+	struct page *org_page;
+	struct page *enc_page;
+	int get_cnt;
+	struct list_head others; /* rest of page pairs */
+};
+
 /*
  * Flags for ext4_io_end->flags
  */
