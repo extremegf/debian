@@ -39,6 +39,7 @@ static struct kmem_cache *io_end_cachep;
  * being 2680 elements long! But proper locking is so tricky by it self
  * that I don't want to risk anything more complicated at this time.
  */
+long max_seen_page_switches_len = 0;
 static struct list_head page_switches = LIST_HEAD_INIT(page_switches);
 static spinlock_t page_switch_lock;
 
@@ -69,8 +70,11 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 		}
         len += 1;
 	}
+	if(max_seen_page_switches_len < len) {
+		max_seen_page_switches_len = len;
+	}
     if(printk_ratelimit()) {
-            printk(KERN_INFO "Using masquerade! List len = %d\n", len);
+            printk(KERN_INFO "Using masquerade! List len = %d\n, max_seen=", len, max_seen_page_switches_len);
     }
 	spin_unlock_irqrestore(&page_switch_lock, flags);
 
