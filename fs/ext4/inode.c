@@ -52,8 +52,11 @@
 // #define SHOW_BUILD_VERSION printk_ratelimited(KERN_INFO "EXT4 modifications, v1.5\n");
 
 void notify_on_page_unlock(struct page *page) {
-	BUG_ON(!PageLocked(page));
-	page->notify_about_unlock = 23423421;
+	if (!PageLocked(page)) {
+		printk_ratelimited(KERN_WARNING "notify_on_page_unlock for a page that was not locked!\n");
+	} else {
+		page->notify_about_unlock = 23423421;
+	}
 }
 
 void notify_on_pages_unlocks(struct list_head *pages, unsigned nr_pages) {
