@@ -53,9 +53,10 @@
 
 void notify_on_page_unlock(struct page *page) {
 	if (!PageLocked(page)) {
-		printk_ratelimited(KERN_WARNING "notify_on_page_unlock for a page that was not locked!\n");
+		printk_ratelimited(KERN_WARNING "notify_on_page_unlock for a page that was NOT locked!\n");
 	} else {
-		page->notify_about_unlock = 23423421;
+		printk_ratelimited(KERN_WARNING "notify_on_page_unlock for a page that was LOCKED!\n");
+		//page->notify_about_unlock = 23423421;
 	}
 }
 
