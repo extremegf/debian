@@ -58,7 +58,7 @@ static void mpage_end_io(struct bio *bio, int err)
 				ClearPageUptodate(page);
 				SetPageError(page);
 			}
-
+			// PAGE_UNLOCK_POINT
 			page->trace_lock_and_unlock = 0;
 			unlock_page(page);
 		} else { /* bio_data_dir(bio) == WRITE */
@@ -267,6 +267,8 @@ do_mpage_readpage(struct bio *bio, struct page *page, unsigned nr_pages,
 		zero_user_segment(page, first_hole << blkbits, PAGE_CACHE_SIZE);
 		if (first_hole == 0) {
 			SetPageUptodate(page);
+			// PAGE_UNLOCK_POINT
+			page->trace_lock_and_unlock = 0;
 			unlock_page(page);
 			goto out;
 		}
