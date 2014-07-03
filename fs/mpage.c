@@ -383,6 +383,7 @@ mpage_readpages(struct address_space *mapping, struct list_head *pages,
 		list_del(&page->lru);
 		if (!add_to_page_cache_lru(page, mapping,
 					page->index, GFP_KERNEL)) {
+			page->trace_lock_and_unlock = 562452234;
 			bio = do_mpage_readpage(bio, page,
 					nr_pages - page_idx,
 					&last_block_in_bio, &map_bh,
@@ -410,6 +411,7 @@ int mpage_readpage(struct page *page, get_block_t get_block)
 
 	map_bh.b_state = 0;
 	map_bh.b_size = 0;
+	page->trace_lock_and_unlock = 562452234;
 	bio = do_mpage_readpage(bio, page, 1, &last_block_in_bio,
 			&map_bh, &first_logical_block, get_block);
 	if (bio)

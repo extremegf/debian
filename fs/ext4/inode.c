@@ -3021,7 +3021,7 @@ static int ext4_readpage(struct file *file, struct page *page)
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
-	notify_on_page_lock(page, "ext4_readpage");
+	//notify_on_page_lock(page, "ext4_readpage");
 
 	SHOW_BUILD_VERSION
 
@@ -3043,7 +3043,7 @@ ext4_readpages(struct file *file, struct address_space *mapping,
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
-	notify_on_pages_locks(pages, nr_pages, "ext4_readpages");
+    //notify_on_pages_locks(pages, nr_pages, "ext4_readpages");
 
 	SHOW_BUILD_VERSION
 
