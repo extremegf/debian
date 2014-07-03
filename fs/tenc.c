@@ -8,3 +8,4 @@
 int tenc_write_switch_page(struct page *page) {
 	return 0;
 }
+EXPORT_SYMBOL(tenc_write_switch_page);
