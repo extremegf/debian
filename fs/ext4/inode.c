@@ -53,22 +53,27 @@
 
 void notify_on_page_lock(struct page *page, const char *page_src) {
 	if (!PageLocked(page)) {
-		printk_ratelimited(KERN_WARNING "%s passed an UNLOCKED page!\n", page_src);
+		//printk_ratelimited(KERN_WARNING "%s passed an UNLOCKED page!\n", page_src);
 		page->trace_lock_and_unlock = 235613123;
 	} else {
-		printk_ratelimited(KERN_WARNING "%s passed an LOCKED page!\n", page_src);
+		//printk_ratelimited(KERN_WARNING "%s passed an LOCKED page!\n", page_src);
 		page->trace_lock_and_unlock = 562452234;
 	}
 }
 
 void notify_on_pages_locks(struct list_head *pages, unsigned nr_pages, const char *page_src) {
 	int page_idx;
+	spinlock_t sl;
+	unsigned long flags;
 
+	spin_lock_init(&sl);
+	spin_lock_irqsave(&sl, flags);
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page = list_entry(pages->prev, struct page, lru);
 		pages = &page->lru;
 		notify_on_page_lock(page, page_src);
 	}
+	spin_unlock_irqrestore(&sl, flags);
 }
 
 static __u32 ext4_inode_csum(struct inode *inode, struct ext4_inode *raw,
