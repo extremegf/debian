@@ -607,14 +607,7 @@ EXPORT_SYMBOL_GPL(add_page_wait_queue);
  */
 void unlock_page(struct page *page)
 {
-	if (page->trace_lock_and_unlock == 562452234) {
-		page->trace_lock_and_unlock = 0;
-
-		if (printk_ratelimit()) {
-			printk(KERN_INFO "Page unlocked from:");
-			dump_stack();
-		}
-	}
+	track_page_unlock(page);
 	VM_BUG_ON(!PageLocked(page));
 	clear_bit_unlock(PG_locked, &page->flags);
 	smp_mb__after_clear_bit();
@@ -645,6 +638,7 @@ EXPORT_SYMBOL(end_page_writeback);
  */
 void __lock_page(struct page *page)
 {
+	track_page_lock(page);
 	DEFINE_WAIT_BIT(wait, &page->flags, PG_locked);
 
 	__wait_on_bit_lock(page_waitqueue(page), &wait, sleep_on_page,
@@ -654,6 +648,7 @@ EXPORT_SYMBOL(__lock_page);
 
 int __lock_page_killable(struct page *page)
 {
+	track_page_lock(page);
 	DEFINE_WAIT_BIT(wait, &page->flags, PG_locked);
 
 	return __wait_on_bit_lock(page_waitqueue(page), &wait,

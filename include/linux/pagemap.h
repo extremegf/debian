@@ -27,6 +27,27 @@ enum mapping_flags {
 	AS_BALLOON_MAP  = __GFP_BITS_SHIFT + 4, /* balloon page special map */
 };
 
+inline void track_page_unlock(struct page *page) {
+	if (page->trace_lock_and_unlock == 562452234) {
+		page->trace_lock_and_unlock = 0;
+
+		if (printk_ratelimit()) {
+			printk(KERN_INFO "Page unlocked from:");
+			dump_stack();
+		}
+	}
+}
+
+inline void track_page_lock(struct page *page) {
+	if (page->trace_lock_and_unlock == 235613123) {
+		page->trace_lock_and_unlock = 562452234;
+
+		if (printk_ratelimit()) {
+			printk(KERN_INFO "Page locked from:");
+			dump_stack();
+		}
+	}
+}
 static inline void mapping_set_error(struct address_space *mapping, int error)
 {
 	if (unlikely(error)) {
@@ -329,17 +350,23 @@ extern void unlock_page(struct page *page);
 
 static inline void __set_page_locked(struct page *page)
 {
+	track_page_lock(page);
 	__set_bit(PG_locked, &page->flags);
 }
 
 static inline void __clear_page_locked(struct page *page)
 {
+	track_page_unlock(page);
 	__clear_bit(PG_locked, &page->flags);
 }
 
 static inline int trylock_page(struct page *page)
 {
-	return (likely(!test_and_set_bit_lock(PG_locked, &page->flags)));
+	int res = (likely(!test_and_set_bit_lock(PG_locked, &page->flags)));
+	if (res) {
+		track_page_lock(page);
+	}
+	return res;
 }
 
 /*
@@ -347,14 +374,6 @@ static inline int trylock_page(struct page *page)
  */
 static inline void lock_page(struct page *page)
 {
-	if (page->trace_lock_and_unlock == 235613123) {
-		page->trace_lock_and_unlock = 562452234;
-
-		if (printk_ratelimit()) {
-			printk(KERN_INFO "Page locked from:");
-			dump_stack();
-		}
-	}
 	might_sleep();
 	if (!trylock_page(page))
 		__lock_page(page);
