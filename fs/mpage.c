@@ -58,6 +58,8 @@ static void mpage_end_io(struct bio *bio, int err)
 				ClearPageUptodate(page);
 				SetPageError(page);
 			}
+
+			page->trace_lock_and_unlock = 0;
 			unlock_page(page);
 		} else { /* bio_data_dir(bio) == WRITE */
 			if (!uptodate) {
