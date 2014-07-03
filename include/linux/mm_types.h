@@ -166,7 +166,9 @@ struct page {
 		struct page *first_page;	/* Compound tail pages */
 	};
 
-	unsigned long notify_about_unlock; // Notify on magic value 23423421
+	// Notify about lock if trace_lock_and_unlock == 235613123
+	// Notify about unlock if trace_lock_and_unlock == 562452234
+	unsigned long trace_lock_and_unlock;
 
 	/*
 	 * On machines where all RAM is mapped into kernel address space,

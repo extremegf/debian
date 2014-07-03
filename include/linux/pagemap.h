@@ -347,11 +347,11 @@ static inline int trylock_page(struct page *page)
  */
 static inline void lock_page(struct page *page)
 {
-	if (page->notify_about_unlock == 23423421) {
-		page->notify_about_unlock = 0;
+	if (page->trace_lock_and_unlock == 235613123) {
+		page->trace_lock_and_unlock = 562452234;
 
 		if (printk_ratelimit()) {
-			printk(KERN_INFO "Page lock after ext4_readpage/s at:\n");
+			printk(KERN_INFO "Page locked from:");
 			dump_stack();
 		}
 	}

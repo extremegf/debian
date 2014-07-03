@@ -51,22 +51,23 @@
 #define SHOW_BUILD_VERSION
 // #define SHOW_BUILD_VERSION printk_ratelimited(KERN_INFO "EXT4 modifications, v1.5\n");
 
-void notify_on_page_lock(struct page *page) {
+void notify_on_page_lock(struct page *page, const char *page_src) {
 	if (!PageLocked(page)) {
-		printk_ratelimited(KERN_WARNING "notify_on_page_unlock for a page that was NOT locked!\n");
-		page->notify_about_unlock = 23423421;
+		printk_ratelimited(KERN_WARNING "%s passed an UNLOCKED page!\n", page_src);
+		page->trace_lock_and_unlock = 235613123;
 	} else {
-		printk_ratelimited(KERN_WARNING "notify_on_page_unlock for a page that was LOCKED!\n");
+		printk_ratelimited(KERN_WARNING "%s passed an LOCKED page!\n", page_src);
+		page->trace_lock_and_unlock = 562452234;
 	}
 }
 
-void notify_on_pages_locks(struct list_head *pages, unsigned nr_pages) {
+void notify_on_pages_locks(struct list_head *pages, unsigned nr_pages, const char *page_src) {
 	int page_idx;
 
 	for (page_idx = 0; page_idx < nr_pages; page_idx++) {
 		struct page *page = list_entry(pages->prev, struct page, lru);
 		pages = &page->lru;
-		notify_on_page_lock(page);
+		notify_on_page_lock(page, page_src);
 	}
 }
 
@@ -3015,7 +3016,7 @@ static int ext4_readpage(struct file *file, struct page *page)
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
-	notify_on_page_lock(page);
+	notify_on_page_lock(page, "ext4_readpage");
 
 	SHOW_BUILD_VERSION
 
@@ -3037,7 +3038,7 @@ ext4_readpages(struct file *file, struct address_space *mapping,
 	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
 		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
-	notify_on_pages_locks(pages, nr_pages);
+	notify_on_pages_locks(pages, nr_pages, "ext4_readpages");
 
 	SHOW_BUILD_VERSION
 

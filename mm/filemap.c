@@ -607,11 +607,11 @@ EXPORT_SYMBOL_GPL(add_page_wait_queue);
  */
 void unlock_page(struct page *page)
 {
-	if (page->notify_about_unlock == 23423421) {
-		page->notify_about_unlock = 0;
+	if (page->trace_lock_and_unlock == 562452234) {
+		page->trace_lock_and_unlock = 0;
 
 		if (printk_ratelimit()) {
-			printk(KERN_INFO "Page unlock after ext4_readpage/s\n");
+			printk(KERN_INFO "Page unlocked from:");
 			dump_stack();
 		}
 	}
