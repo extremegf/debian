@@ -2945,6 +2945,10 @@ static void end_bio_bh_io_sync(struct bio *bio, int err)
 {
 	struct buffer_head *bh = bio->bi_private;
 
+	if (!err) {
+		tenc_decrypt_buffer_head(bh);
+	}
+
 	if (err == -EOPNOTSUPP) {
 		set_bit(BIO_EOPNOTSUPP, &bio->bi_flags);
 	}

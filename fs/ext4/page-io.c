@@ -52,17 +52,6 @@ static struct list_head enc_to_org_hashtab[PS_HASH_BUCKETS];
 static struct list_head org_to_enc_hashtab[PS_HASH_BUCKETS];
 static spinlock_t page_switch_lock;
 
-static void fill_enc_page(struct page* org_page, struct page* enc_page) {
-	char *org_addr, *enc_addr;
-	org_addr = kmap(org_page);
-	enc_addr = kmap(enc_page);
-
-	memcpy(enc_addr, org_addr, PAGE_SIZE);
-
-	kunmap(org_page);
-	kunmap(enc_page);
-}
-
 static struct page_switch *get_page_switch(struct page* org_page) {
 	struct page_switch *p;
 	struct list_head *pos;
@@ -95,8 +84,6 @@ static struct page_switch *get_page_switch(struct page* org_page) {
 		return NULL;
 	}
 	e2o_bucket = hash_ptr(p->enc_page, PS_HASH_BUCKET_BITS);
-
-	fill_enc_page(p->org_page, p->enc_page);
 
 	spin_lock_irqsave(&page_switch_lock, flags);
 	list_add(&p->org_to_enc_bucket, &org_to_enc_hashtab[o2e_bucket]);
@@ -517,11 +504,14 @@ submit_and_retry:
 	 */
 	page = bh->b_page;
 
-	if (1 /* let's masquerade all pages! */ ) {
+	if (tenc_write_needs_page_switch(bh)) {
 		struct page_switch *page_switch = get_page_switch(page);
 		if (!page_switch) {
 			return -ENOMEM;
 		}
+
+		tenc_encrypt_block(bh, page_switch->enc_page);
+
 		page = page_switch->enc_page;
 	}
 
