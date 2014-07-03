@@ -638,8 +638,8 @@ EXPORT_SYMBOL(end_page_writeback);
  */
 void __lock_page(struct page *page)
 {
-	track_page_lock(page);
 	DEFINE_WAIT_BIT(wait, &page->flags, PG_locked);
+	track_page_lock(page);
 
 	__wait_on_bit_lock(page_waitqueue(page), &wait, sleep_on_page,
 							TASK_UNINTERRUPTIBLE);
@@ -648,8 +648,8 @@ EXPORT_SYMBOL(__lock_page);
 
 int __lock_page_killable(struct page *page)
 {
-	track_page_lock(page);
 	DEFINE_WAIT_BIT(wait, &page->flags, PG_locked);
+	track_page_lock(page);
 
 	return __wait_on_bit_lock(page_waitqueue(page), &wait,
 					sleep_on_page_killable, TASK_KILLABLE);
