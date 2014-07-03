@@ -27,7 +27,7 @@ enum mapping_flags {
 	AS_BALLOON_MAP  = __GFP_BITS_SHIFT + 4, /* balloon page special map */
 };
 
-inline void track_page_unlock(struct page *page) {
+static inline void track_page_unlock(struct page *page) {
 	if (page->trace_lock_and_unlock == 562452234) {
 		page->trace_lock_and_unlock = 0;
 
@@ -38,7 +38,7 @@ inline void track_page_unlock(struct page *page) {
 	}
 }
 
-inline void track_page_lock(struct page *page) {
+static inline void track_page_lock(struct page *page) {
 	if (page->trace_lock_and_unlock == 235613123) {
 		page->trace_lock_and_unlock = 562452234;
 
