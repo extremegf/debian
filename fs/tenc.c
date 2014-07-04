@@ -4,6 +4,8 @@
  * Author: Przemyslaw Horban (p.horban@mimuw.edu.pl)
  */
 
+#include <linux/kernel.h>
+#include <linux/export.h>
 #include <linux/mm_types.h>
 #include <linux/buffer_head.h>
 #include <linux/fs.h>
