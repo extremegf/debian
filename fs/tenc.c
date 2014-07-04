@@ -15,6 +15,7 @@
 #include <linux/workqueue.h>
 #include <linux/linkage.h>
 #include <linux/crypto.h>
+#include <asm-generic/scatterlist.h>
 #include <asm/current.h>
 
 #define KEY_XATTR "user.encryp_key"
