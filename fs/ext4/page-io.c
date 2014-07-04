@@ -30,6 +30,7 @@
 #include <linux/mm.h>
 #include <linux/ratelimit.h>
 
+#include "internal.h"
 #include "ext4_jbd2.h"
 #include "xattr.h"
 #include "acl.h"
