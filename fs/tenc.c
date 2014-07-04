@@ -109,11 +109,13 @@ EXPORT_SYMBOL(tenc_encrypt_block);
 static void _tenc_decrypt_bh(struct buffer_head *bh) {
 	struct page *page = bh->b_page;
 	int i, pos;
-	char *addr = kmap_atomic(page);
+	char *addr;
 
 	printk(KERN_INFO "decrypting bh %d of length %d\n",
 			(int)_tenc_page_pos_to_blknr(page, page->mapping->host, bh_offset(bh)),
 			(int)bh->b_size);
+
+    addr = kmap_atomic(page);
 	for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
 		addr[pos] = ~addr[pos];
 	}
@@ -131,11 +133,11 @@ void tenc_decrypt_page(struct page *page, unsigned int offset,
 
 	if (_tenc_should_encrypt(inode)) {
 		int i, pos;
-		char *addr = kmap_atomic(page);
+		char *addr;
 		printk(KERN_INFO "decrypting page bl. %d of length %d\n",
 				(int)_tenc_page_pos_to_blknr(page, inode, offset),
 				(int)len);
-
+		addr = kmap_atomic(page);
 		for (i = 0, pos = offset; i < len; i++, pos++) {
 			addr[pos] = ~addr[pos];
 		}
