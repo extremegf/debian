@@ -103,7 +103,12 @@ void tenc_decrypt_buffer_head(struct buffer_head *bh) {
 		return;
 	}
 
+	if (!bh->b_assoc_map) {
+		return;  /* This can happen */
+	}
+
 	inode = bh->b_assoc_map->host;
+
 
 	if (!inode) {
 		printk(KERN_ERR "tenc_decrypt_buffer_head buffer_head had a NULL inode.");
