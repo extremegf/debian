@@ -65,7 +65,6 @@ static void mpage_end_io(struct bio *bio, int err)
 					SetPageError(page);
 					unlock_page(page);
 				}
-				BUG_ON(enc_status != TENC_LEAVE_LOCKED);
 			} else {
 				ClearPageUptodate(page);
 				SetPageError(page);

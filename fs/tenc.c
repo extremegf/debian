@@ -13,6 +13,12 @@
 #include <linux/printk.h>
 #include <linux/ratelimit.h>
 #include <linux/workqueue.h>
+#include<linux/linkage.h>
+
+asmlinkage int sys_addkey(unsigned char *key) {
+	printk(KERN_INFO "addkey called with arg %p\n", key);
+	return 0;
+}
 
 struct page_decrypt_work {
 	struct work_struct work;
@@ -24,11 +30,14 @@ struct page_decrypt_work {
 static int _tenc_should_encrypt(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
 	if (!dentry) {
-		printk(KERN_WARNING "_tenc_should_encrypt did not found an dentry for inode.\n");
+		// printk(KERN_WARNING
+		// 	 	  "_tenc_should_encrypt did not found an dentry for inode.\n");
 		return 0;
 	}
 
-	printk_ratelimited(KERN_WARNING "generic_getxattr returned = %d\n", generic_getxattr(dentry, "user.encrypt", NULL, 0));
+	// mpage_end_io + 0x6b
+	// printk_ratelimited(KERN_WARNING "generic_getxattr returned = %d\n",
+	//                    generic_getxattr(dentry, "user.encrypt", NULL, 0));
 	return 0 < generic_getxattr(dentry, "user.encrypt", NULL, 0);
 }
 
@@ -47,8 +56,8 @@ static struct inode *_tenc_safe_bh_to_inode(struct buffer_head *bh) {
 
 
 	if (!bh->b_page->mapping) {
-		printk(KERN_ERR "tenc_decrypt_buffer_head "
-			   "bh->b_page->mapping == NULL\n");
+		// printk(KERN_ERR "tenc_decrypt_buffer_head "
+		// 	   "bh->b_page->mapping == NULL\n");
 		return NULL;
 	}
 
