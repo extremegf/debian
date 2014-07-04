@@ -70,7 +70,7 @@ asmlinkage int sys_addkey(unsigned char __user *user_key) {
 
     printk(KERN_INFO "New secret key added to current, key_id=\"");
     for (i = 0; i < 16; i++) {
-        printk("\\x%02x", tsk_key->key_id[i], i);
+        printk("\\x%02x", tsk_key->key_id[i]);
     }
     printk("\"\n");
 
