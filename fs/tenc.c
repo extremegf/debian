@@ -48,9 +48,9 @@ static struct inode *_tenc_safe_bh_to_inode(struct buffer_head *bh) {
  * our encryption from mmaps etc.
  */
 int tenc_write_needs_page_switch(struct buffer_head *bh) {
-	struct inode *inode; = bh->b_assoc_map->host;
+	struct inode *inode = _tenc_safe_bh_to_inode(bh);
 
-	if (_tenc_should_encrypt(inode)) {
+	if (inode && _tenc_should_encrypt(inode)) {
 		return 1;
 	}
 	return 0;
