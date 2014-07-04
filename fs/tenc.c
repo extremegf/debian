@@ -20,7 +20,7 @@ static int _tenc_shold_encrypt(struct inode *inode) {
 	if (!dentry) {
 		return 0;
 	}
-	return 0 < inode->i_sb->s_xattr->get(dentry, "encrypt", NULL, 0, 0);
+	return 0 < (*(inode->i_sb->s_xattr))->get(dentry, "encrypt", NULL, 0, 0);
 }
 
 
