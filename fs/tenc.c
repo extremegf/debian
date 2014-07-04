@@ -251,7 +251,7 @@ int tenc_decrypt_page(struct page *page) {
 		else {
 			return TENC_DECR_FAIL;
 		}
-	}
+	}crypto_cipher_encrypt_one
 
 	return TENC_CAN_UNLOCK;
 }
