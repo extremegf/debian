@@ -118,7 +118,7 @@ static void _tenc_decrypt_bh(struct buffer_head *bh) {
 		addr[pos] = ~addr[pos];
 	}
 
-	kunmap_atomic(page);
+	kunmap_atomic(addr);
 }
 
 /*
@@ -139,7 +139,7 @@ void tenc_decrypt_page(struct page *page, unsigned int offset,
 		for (i = 0, pos = offset; i < len; i++, pos++) {
 			addr[pos] = ~addr[pos];
 		}
-		kunmap_atomic(page);
+		kunmap_atomic(addr);
 	}
 }
 EXPORT_SYMBOL(tenc_decrypt_page);
