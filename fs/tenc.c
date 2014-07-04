@@ -279,16 +279,23 @@ EXPORT_SYMBOL(tenc_decrypt_buffer_head);
  * Checks if the caller can open given file. Returns 1 if he can, 0 otherwise.
  */
 int tenc_can_open(struct inode *inode, struct file *filp) {
-	int atr_len = generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0);
-//	if (atr_len == MD5_LENGTH) {
-//		return 1;
-//	}
-//
-//	if (atr_len != MD5_LENGTH) {
-//		return
-//	}
+	char user_key_id[MD5_LENGTH];
+	int atr_len = generic_getxattr(filp->f_dentry, KEY_ID_XATTR,
+			user_key_id, MD5_LENGTH);
 
-	return 1;
+    if (atr_len == 0) {
+    	return 1;
+    }
+
+    if (atr_len == MD5_LENGTH) {
+    	if(_tenc_find_task_key(inode, user_key_id)) {
+    		printk(KERN_INFO "Key found. Allowing to open the file.\n");
+    	}
+
+    	return 1;
+    }
+
+	return 0;
 }
 EXPORT_SYMBOL(tenc_can_open);
 
