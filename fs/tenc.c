@@ -142,7 +142,7 @@ void tenc_decrypt_page(struct page *page, unsigned int offset,
 		kunmap(page);
 	}
 }
-EXPORT_SYMBOL(tenc_decrypt_full_page);
+EXPORT_SYMBOL(tenc_decrypt_page);
 
 /*
  * Decrypts a single file block.
