@@ -20,6 +20,7 @@
 #include <asm/current.h>
 
 #define KEY_ID_XATTR "user.enc_key_id"
+#define IV_XATTR "user.enc_iv"
 #define MD5_LENGTH 16
 
 /* Note that the key search and adding are not synchronized. This is
@@ -40,13 +41,15 @@ asmlinkage int sys_addkey(unsigned char __user *user_key) {
 	if (!copy_from_user(&tsk_key->key_bytes, user_key,
 			sizeof(tsk_key->key_bytes))) {
 		kfree(tsk_key);
+		printk(KERN_INFO "sys_addkey: copy_from_user failed\n")l
 		return -EFAULT;
 	}
 
     tfm = crypto_alloc_hash("md5", 0, CRYPTO_ALG_ASYNC);
 
     if (IS_ERR(tfm)) {
-		kfree(tsk_key);
+		printk(KERN_INFO "sys_addkey: crypto_alloc_hash failed\n")l
+    	kfree(tsk_key);
 		return -EFAULT;
     }
 
@@ -57,6 +60,7 @@ asmlinkage int sys_addkey(unsigned char __user *user_key) {
     if (!crypto_hash_init(&desc) ||
     		!crypto_hash_update(&desc, &sg, sizeof(tsk_key->key_bytes)) ||
     		!crypto_hash_final(&desc, tsk_key->key_id)) {
+		printk(KERN_INFO "sys_addkey: hashing failed\n");
     	crypto_free_hash(tfm);
     	kfree(tsk_key);
     	return -EFAULT;
@@ -300,6 +304,9 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		return err;
 	}
 
+	// TODO initial vector attr
+	IV_XATTR
+
 	inode = filp->f_inode;
 	spin_lock_irqsave(&inode->i_lock, iflags);
 
@@ -310,6 +317,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 				"opened more than once.\n");
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
+		generic_removexattr(filp->f_dentry, IV_XATTR);
 		return -EACCES;
 	}
 
@@ -317,6 +325,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		printk(KERN_INFO "Encrypted file access denied - file not empty\n");
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
+		generic_removexattr(filp->f_dentry, IV_XATTR);
 		return -EACCES;
 	}
 
