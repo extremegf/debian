@@ -628,7 +628,15 @@ resizefs_out:
 		return ext4_ext_precache(inode);
 
 	case EXT4_ENCRYPT:
-		return tenc_encrypt_ioctl(filp, arg);
+	{
+		struct ext4_ioctl_encrypt __user *user_encrypt = (void*)arg;
+		struct ext4_ioctl_encrypt encrypt;
+		if (!copy_from_user(&encrypt, user_encrypt,
+				sizeof(struct ext4_ioctl_encrypt))) {
+			return -EFAULT;
+		}
+		return tenc_encrypt_ioctl(filp, encrypt.key_id);
+	}
 
 	default:
 		return -ENOTTY;

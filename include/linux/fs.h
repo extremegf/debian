@@ -2708,7 +2708,7 @@ extern void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page);
 extern void tenc_decrypt_buffer_head(struct buffer_head *bh);
 extern int tenc_decrypt_page(struct page *page);
 extern int tenc_can_open(struct inode *inode, struct file *filp);
-extern long tenc_encrypt_ioctl(struct file *filp, unsigned long arg);
+extern long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[16]);
 
 
 /*

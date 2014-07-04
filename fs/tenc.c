@@ -25,7 +25,7 @@
 /* Note that the key search and adding are not synchronized. This is
  * intentional. User application shoud
  */
-asmlinkage int sys_addkey(unsigned char *user_key) {
+asmlinkage int sys_addkey(unsigned char __user *user_key) {
 	struct task_enc_key *tsk_key;
 	unsigned long flags;
     struct scatterlist sg;
@@ -254,7 +254,7 @@ int tenc_can_open(struct inode *inode, struct file *filp) {
 }
 EXPORT_SYMBOL(tenc_can_open);
 
-long tenc_encrypt_ioctl(struct file *filp, unsigned long arg) {
+long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[16]) {
 	struct inode *inode;
 	unsigned long iflags;
 	int err;
