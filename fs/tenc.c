@@ -10,13 +10,16 @@
 #include <linux/buffer_head.h>
 #include <linux/fs.h>
 #include <linux/xattr.h>
+#include <linux/printk.h>
 
 static int _tenc_should_encrypt(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
 	if (!dentry) {
-		printk(KERN_WARNING "_tenc_should_encrypt did not found an inode for inode.");
+		printk(KERN_WARNING "_tenc_should_encrypt did not found an inode for inode.\n");
 		return 0;
 	}
+
+	printk_ratelimited(KERN_WARNING "generic_getxattr returned = %d\n", generic_getxattr(dentry, "user.encrypt", NULL, 0));
 	return 0 < generic_getxattr(dentry, "user.encrypt", NULL, 0);
 }
 
@@ -24,18 +27,19 @@ static struct inode *_tenc_safe_bh_to_inode(struct buffer_head *bh) {
 	struct inode *inode;
 
 	if (!bh) {
-		printk(KERN_ERR "tenc_decrypt_buffer_head got a NULL buffer_head.");
+		printk(KERN_ERR "tenc_decrypt_buffer_head got a NULL buffer_head.\n");
 		return NULL;
 	}
 
 	if (!bh->b_assoc_map) {
+		printk_ratelimited(KERN_WARNING "bh->b_assoc_map == NULL...\n");
 		return NULL;  /* This is expected */
 	}
 
 	inode = bh->b_assoc_map->host;
 
 	if (!inode) {
-		printk(KERN_ERR "tenc_decrypt_buffer_head buffer_head had a NULL inode.");
+		printk(KERN_ERR "tenc_decrypt_buffer_head buffer_head had a NULL inode.\n");
 	}
 
     return inode;
