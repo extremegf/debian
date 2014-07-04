@@ -19,7 +19,7 @@ static int _tenc_should_encrypt(struct inode *inode) {
 		return 0;
 	}
 
-	printk_ratelimited(KERN_WARNING "generic_getxattr returned = %d\n", generic_getxattr(dentry, "user.encrypt", NULL, 0));
+	prink_ratelimited(KERN_WARNING "generic_getxattr returned = %d\n", generic_getxattr(dentry, "user.encrypt", NULL, 0));
 	return 0 < generic_getxattr(dentry, "user.encrypt", NULL, 0);
 }
 
@@ -32,7 +32,7 @@ static struct inode *_tenc_safe_bh_to_inode(struct buffer_head *bh) {
 	}
 
 	if (!bh->b_assoc_map) {
-		printk_ratelimited(KERN_WARNING "bh->b_assoc_map == NULL...\n");
+		prink_ratelimited(KERN_WARNING "bh->b_assoc_map == NULL...\n");
 		return NULL;  /* This is expected */
 	}
 
