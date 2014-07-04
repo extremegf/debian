@@ -13,20 +13,61 @@
 #include <linux/printk.h>
 #include <linux/ratelimit.h>
 #include <linux/workqueue.h>
-#include<linux/linkage.h>
+#include <linux/linkage.h>
+#include <linux/crypto.h>
+#include <asm/current.h>
 
 #define KEY_XATTR "user.encryp_key"
+#define MD5_LENGTH 16
 
-asmlinkage int sys_addkey(unsigned char *key) {
+/* Note that the key search and adding are not synchronized. This is
+ * intentional. User application shoud
+ */
+asmlinkage int sys_addkey(unsigned char *user_key) {
 	char *buf;
-	int len = strlen_user(key);
-	buf = kmalloc(len, GFP_KERNEL);
-	if (buf) {
-		if (len == strncpy_from_user(buf, key, len) + 1) {
-			printk(KERN_INFO "addkey(key=%s)\n", buf);
-			return 0;
-		}
+	struct task_enc_key *tsk_key;
+	unsigned long flags;
+    struct scatterlist sg;
+    struct crypto_hash *tfm;
+    struct hash_desc desc;
+
+	tsk_key = kmalloc(sizeof(struct task_enc_key), GFP_KERNEL);
+
+	if (!tsk_key)
+		return -ENOMEM;
+
+	if (!copy_from_user(&tsk_key->key_bytes, user_key,
+			sizeof(tsk_key->key_bytes))) {
+		kfree(tsk_key);
+		return -EFAULT;
 	}
+
+    tfm = crypto_alloc_hash("md5", 0, CRYPTO_ALG_ASYNC);
+
+    if (IS_ERR(tfm)) {
+		kfree(tsk_key);
+		return -EFAULT;
+    }
+
+    desc.tfm = tfm;
+    desc.flags = 0;
+
+    sg_init_one(&sg, &tsk_key->key_bytes, sizeof(tsk_key->key_bytes));
+    if (!crypto_hash_init(&desc) ||
+    		!crypto_hash_update(&desc, &sg, sizeof(tsk_key->key_bytes)) ||
+    		!crypto_hash_final(&desc, &tsk_key->key_id)) {
+    	crypto_free_hash(tfm);
+    	kfree(tsk_key);
+    	return -EFAULT;
+    }
+
+//    for (i = 0; i < 16; i++) {
+//        printk(KERN_ERR "%d-%d\n", tsk_key->key_bytes[i], i);
+//    }
+
+	spin_lock_irqsave(&current->enc_keys_lock, flags);
+	list_add(&tsk_key->other_keys, current->enc_keys);
+	spin_unlock_irqrestore(&current->enc_keys_lock, flags);
 	return 0;
 }
 

@@ -1435,7 +1435,10 @@ struct task_struct {
 #endif
 #ifdef CONFIG_TRACING
 
-	/* encryption keys held by this process */
+	/* encryption keys held by this process and their locking*/
+	// TODO: We cant allow a combination of syscalls and ioctls to corrupt
+	// kernel memory. But how to synchronize without adding a spinlock here?
+	spinlock_t enc_keys_lock;
 	struct list_head enc_keys;
 
 	/* state flags for use by tracers */
@@ -2094,6 +2097,11 @@ extern struct sigqueue *sigqueue_alloc(void);
 extern void sigqueue_free(struct sigqueue *);
 extern int send_sigqueue(struct sigqueue *,  struct task_struct *, int group);
 extern int do_sigaction(int, struct k_sigaction *, struct k_sigaction *);
+
+// Surely there is a better place to put these...
+void enc_keys_task_init(struct task_struct *tsk);
+void exit_task_enc_keys(struct task_struct *tsk);
+int copy_enc_keys(unsigned long clone_flags, struct task_struct *tsk);
 
 static inline void restore_saved_sigmask(void)
 {

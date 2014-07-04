@@ -45,4 +45,3 @@ int copy_enc_keys(unsigned long clone_flags, struct task_struct *tsk) {
 	}
 	return 0;
 }
-
