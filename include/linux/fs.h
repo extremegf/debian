@@ -2700,8 +2700,8 @@ void simple_transaction_set(struct file *file, size_t n);
 
 /* Transparent file encryption callbacks. */
 
-#define TENC_CAN_UNLOCK 1
-#define TENC_LEAVE_LOCKED 0
+#define TENC_CAN_UNLOCK 0
+#define TENC_LEAVE_LOCKED 1
 #define TENC_DECR_FAIL -1
 extern int tenc_write_needs_page_switch(struct buffer_head *bh);
 extern void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page);
