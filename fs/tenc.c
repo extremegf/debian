@@ -280,13 +280,13 @@ EXPORT_SYMBOL(tenc_decrypt_buffer_head);
  */
 int tenc_can_open(struct inode *inode, struct file *filp) {
 	int atr_len = generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0);
-	if (atr_len 0= MD5_LENGTH) {
-		return 1;
-	}
-
-	if (atr_len != MD5_LENGTH) {
-		return
-	}
+//	if (atr_len == MD5_LENGTH) {
+//		return 1;
+//	}
+//
+//	if (atr_len != MD5_LENGTH) {
+//		return
+//	}
 
 	return 1;
 }
