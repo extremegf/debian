@@ -2703,7 +2703,9 @@ void simple_transaction_set(struct file *file, size_t n);
 extern int tenc_write_needs_page_switch(struct buffer_head *bh);
 extern void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page);
 extern void tenc_decrypt_buffer_head(struct buffer_head *bh);
-extern void tenc_decrypt_full_page(struct page *page);
+extern void tenc_decrypt_page(struct page *page, unsigned int offset,
+		unsigned int len);
+
 
 /*
  * simple attribute files

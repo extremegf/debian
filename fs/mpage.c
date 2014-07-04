@@ -53,7 +53,7 @@ static void mpage_end_io(struct bio *bio, int err)
 			prefetchw(&bvec->bv_page->flags);
 		if (bio_data_dir(bio) == READ) {
 			if (uptodate) {
-				tenc_decrypt_full_page(page, bvec->bv_offset, bvec->bv_len);
+				tenc_decrypt_page(page, bvec->bv_offset, bvec->bv_len);
 				SetPageUptodate(page);
 			} else {
 				ClearPageUptodate(page);
