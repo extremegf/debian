@@ -71,7 +71,7 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 		char *dst_addr = kmap(dst_page);
 		char *src_addr = kmap(src_page);
 
-		kprint(KERN_INFO "encrypting block %d of length %d\n", (int)bh->b_blocknr, (int)bh->b_size);
+		printk(KERN_INFO "encrypting block %d of length %d\n", (int)bh->b_blocknr, (int)bh->b_size);
 		for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
 			dst_addr[pos] = ~src_addr[pos];
 		}
@@ -90,7 +90,7 @@ static void _tenc_decrypt_bh(struct buffer_head *bh) {
 	int i, pos;
 	char *addr = kmap(page);
 
-	kprint(KERN_INFO "decrypting block %d of length %d\n", (int)bh->b_blocknr, (int)bh->b_size);
+	printk(KERN_INFO "decrypting block %d of length %d\n", (int)bh->b_blocknr, (int)bh->b_size);
 	for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
 		addr[pos] = ~addr[pos];
 	}
