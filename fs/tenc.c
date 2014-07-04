@@ -11,6 +11,7 @@
 #include <linux/fs.h>
 #include <linux/xattr.h>
 #include <linux/printk.h>
+#include <linux/ratelimit.h>
 
 static int _tenc_should_encrypt(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
