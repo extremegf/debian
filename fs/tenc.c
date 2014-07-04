@@ -32,15 +32,23 @@ static struct inode *_tenc_safe_bh_to_inode(struct buffer_head *bh) {
 		return NULL;
 	}
 
-	if (!bh->b_assoc_map) {
-		printk_ratelimited(KERN_WARNING "bh->b_assoc_map == NULL...\n");
-		return NULL;  /* This is expected */
+	if (!bh->b_page) {
+		printk(KERN_ERR "tenc_decrypt_buffer_head got a bh->b_page == NULL\n");
+		return NULL;
 	}
 
-	inode = bh->b_assoc_map->host;
+
+	if (!bh->b_page->mapping) {
+		printk(KERN_ERR "tenc_decrypt_buffer_head "
+			   "bh->b_page->mapping == NULL\n");
+		return NULL;
+	}
+
+	inode = bh->b_page->mapping->host;
 
 	if (!inode) {
-		printk(KERN_ERR "tenc_decrypt_buffer_head buffer_head had a NULL inode.\n");
+		printk(KERN_ERR "tenc_decrypt_buffer_head "
+				        "page->mapping had a NULL host (inode).\n");
 	}
 
     return inode;
