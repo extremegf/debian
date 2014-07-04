@@ -58,9 +58,9 @@ asmlinkage int sys_addkey(unsigned char __user *user_key) {
     desc.flags = 0;
 
     sg_init_one(&sg, tsk_key->key_bytes, sizeof(tsk_key->key_bytes));
-    if (!crypto_hash_init(&desc) ||
-    		!crypto_hash_update(&desc, &sg, sizeof(tsk_key->key_bytes)) ||
-    		!crypto_hash_final(&desc, tsk_key->key_id)) {
+    if (crypto_hash_init(&desc) ||
+    		crypto_hash_update(&desc, &sg, sizeof(tsk_key->key_bytes)) ||
+    		crypto_hash_final(&desc, tsk_key->key_id)) {
 		printk(KERN_INFO "sys_addkey: hashing failed\n");
     	crypto_free_hash(tfm);
     	kfree(tsk_key);
@@ -305,8 +305,6 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	if (err) {
 		return err;
 	}
-
-	// TODO initial vector attr
 
 	err = generic_setxattr(filp->f_dentry, IV_XATTR, enc_iv, IV_LENGTH, 0);
 	if (err) {
