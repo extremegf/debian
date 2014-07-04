@@ -19,7 +19,7 @@
 #include <linux/scatterlist.h>
 #include <asm/current.h>
 
-#define KEY_XATTR "user.encryp_key"
+#define KEY_ID_XATTR "user.enc_key_id"
 #define MD5_LENGTH 16
 
 /* Note that the key search and adding are not synchronized. This is
@@ -142,7 +142,6 @@ int tenc_write_needs_page_switch(struct buffer_head *bh) {
 	}
 	return 0;
 }
-EXPORT_SYMBOL(tenc_write_needs_page_switch);
 
 /*
  * Encrypts the given buffer_head, but uses the dst_page as the destination
@@ -169,7 +168,6 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 		kunmap(dst_page);
 	}
 }
-EXPORT_SYMBOL(tenc_encrypt_block);
 
 static void _tenc_decrypt_page_worker(struct work_struct *_work) {
 	struct page_decrypt_work *work = (struct page_decrypt_work*)_work;
@@ -223,7 +221,6 @@ int tenc_decrypt_page(struct page *page) {
 
 	return TENC_CAN_UNLOCK;
 }
-EXPORT_SYMBOL(tenc_decrypt_page);
 
 /*
  * Decrypts a single file block. Special case for pages containing
@@ -241,7 +238,6 @@ void tenc_decrypt_buffer_head(struct buffer_head *bh) {
 		BUG();
 	}
 }
-EXPORT_SYMBOL(tenc_decrypt_buffer_head);
 
 /*
  * Checks if the caller can open given file. Returns 1 if he can, 0 otherwise.
@@ -253,8 +249,7 @@ int tenc_can_open(struct inode *inode, struct file *filp) {
 	return 1;
 }
 
-long tenc_encrypt_ioctl(struct file *filp, unsigned int cmd,
-		unsigned long arg) {
+long tenc_encrypt_ioctl(struct file *filp, unsigned long arg) {
 	struct inode *inode;
 	unsigned long iflags;
 	int err;
@@ -265,11 +260,11 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned int cmd,
 	 * right anyway and security done almost-right is worth nothing.
 	 */
 
-	if (0 < generic_getxattr(filp->f_dentry, KEY_XATTR, NULL, 0)) {
+	if (0 < generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0)) {
 		return -EEXIST;
 	}
 
-	err = generic_setxattr(filp->f_dentry, KEY_XATTR, "1234", 4, 0); // TODO
+	err = generic_setxattr(filp->f_dentry, KEY_ID_XATTR, "1234", 4, 0); // TODO
 	if (err) {
 		return err;
 	}
@@ -283,18 +278,17 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned int cmd,
 		printk(KERN_INFO "Encrypted file access denied - file "
 				"opened more than once.\n");
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
-		generic_removexattr(filp->f_dentry, KEY_XATTR);
+		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
 		return -EACCES;
 	}
 
 	if (inode->i_bytes > 0) {
 		printk(KERN_INFO "Encrypted file access denied - file not empty\n");
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
-		generic_removexattr(filp->f_dentry, KEY_XATTR);
+		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
 		return -EACCES;
 	}
 
 	spin_unlock_irqrestore(&inode->i_lock, iflags);
 	return 0;
 }
-EXPORT_SYMBOL(tenc_encrypt_ioctl);

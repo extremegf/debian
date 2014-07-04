@@ -628,7 +628,7 @@ resizefs_out:
 		return ext4_ext_precache(inode);
 
 	case EXT4_ENCRYPT:
-		return tenc_encrypt_ioctl(filp, cmd, arg);
+		return tenc_encrypt_ioctl(filp, arg);
 
 	default:
 		return -ENOTTY;
