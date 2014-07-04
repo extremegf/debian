@@ -16,7 +16,7 @@
 #include <linux/linkage.h>
 #include <linux/crypto.h>
 #include <linux/spinlock.h>
-#include <asm-generic/scatterlist.h>
+#include <linux/scatterlist.h>
 #include <asm/current.h>
 
 #define KEY_XATTR "user.encryp_key"
@@ -282,19 +282,19 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned int cmd,
 	if (atomic_read(&inode->i_count) > 1) {
 		printk(KERN_INFO "Encrypted file access denied - file "
 				"opened more than once.\n");
-		spin_lock_irqrestore(&inode->i_lock, iflags);
+		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		generic_removexattr(filp->f_dentry, KEY_XATTR);
 		return -EACCES;
 	}
 
 	if (inode->i_bytes > 0) {
 		printk(KERN_INFO "Encrypted file access denied - file not empty\n");
-		spin_lock_irqrestore(&inode->i_lock, iflags);
+		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		generic_removexattr(filp->f_dentry, KEY_XATTR);
 		return -EACCES;
 	}
 
-	spin_lock_irqrestore(&inode->i_lock, iflags);
+	spin_unlock_irqrestore(&inode->i_lock, iflags);
 	return 0;
 }
 EXPORT_SYMBOL(tenc_encrypt_ioctl);
