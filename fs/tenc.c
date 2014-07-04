@@ -18,7 +18,7 @@
 asmlinkage int sys_addkey(unsigned char *key) {
 	char *buf;
 	int len = strlen_user(key);
-	buf = kmalloc(len);
+	buf = kmalloc(len, GFP_KERNEL);
 	if (buf) {
 		if (len == strncpy_from_user(buf, key, len) + 1) {
 			printk(KERN_INFO "addkey called with arg %p\n", key);
