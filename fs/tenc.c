@@ -25,6 +25,7 @@ asmlinkage int sys_addkey(unsigned char *key) {
 			return 0;
 		}
 	}
+	return 0;
 }
 
 struct page_decrypt_work {
