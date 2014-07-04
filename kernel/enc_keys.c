@@ -7,6 +7,7 @@
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/sched.h>
+#include <linux/slab.h>
 #include <asm/current.h>
 
 void enc_keys_task_init(struct task_struct *tsk) {
@@ -38,10 +39,10 @@ int copy_enc_keys(unsigned long clone_flags, struct task_struct *tsk) {
 		}
 
 		key = list_entry(pos, struct task_enc_key, other_keys);
-		memcpy(&key_copy->key_bytes, &key->key_bytes, sizeof(key->key_bytes));
-		memcpy(&key_copy->key_id, &key->key_id, sizeof(key->key_id));
+		memcpy(key_copy->key_bytes, key->key_bytes, sizeof(key->key_bytes));
+		memcpy(key_copy->key_id, key->key_id, sizeof(key->key_id));
 
-		list_add(&key_copy->other_keys, tsk->enc_keys);
+		list_add(&key_copy->other_keys, &tsk->enc_keys);
 	}
 	return 0;
 }

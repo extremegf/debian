@@ -26,7 +26,6 @@
  * intentional. User application shoud
  */
 asmlinkage int sys_addkey(unsigned char *user_key) {
-	char *buf;
 	struct task_enc_key *tsk_key;
 	unsigned long flags;
     struct scatterlist sg;
