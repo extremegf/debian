@@ -16,8 +16,15 @@
 #include<linux/linkage.h>
 
 asmlinkage int sys_addkey(unsigned char *key) {
-	printk(KERN_INFO "addkey called with arg %p\n", key);
-	return 0;
+	char *buf;
+	int len = strlen_user(key);
+	buf = kmalloc(len);
+	if (buf) {
+		if (len == strncpy_from_user(buf, key, len) + 1) {
+			printk(KERN_INFO "addkey called with arg %p\n", key);
+			return 0;
+		}
+	}
 }
 
 struct page_decrypt_work {
@@ -160,6 +167,8 @@ int tenc_decrypt_page(struct page *page, unsigned int offset,
 			int err;
 			INIT_WORK((struct work_struct *)work, _tenc_decrypt_page_worker);
 
+            printk(KERN_INFO "Adding decryption work page=%p, len=%d, offset=%d\n",
+            		page, len, offset);
 			work->page = page;
 			work->offset = offset;
 			work->len = len;
