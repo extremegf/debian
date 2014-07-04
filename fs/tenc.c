@@ -20,6 +20,27 @@ static int _tenc_should_encrypt(struct inode *inode) {
 	return 0 < generic_getxattr(dentry, "user.encrypt", NULL, 0);
 }
 
+static struct inode *_tenc_safe_bh_to_inode(struct buffer_head *bh) {
+	struct inode *inode;
+
+	if (!bh) {
+		printk(KERN_ERR "tenc_decrypt_buffer_head got a NULL buffer_head.");
+		return NULL;
+	}
+
+	if (!bh->b_assoc_map) {
+		return NULL;  /* This is expected */
+	}
+
+	inode = bh->b_assoc_map->host;
+
+	if (!inode) {
+		printk(KERN_ERR "tenc_decrypt_buffer_head buffer_head had a NULL inode.");
+	}
+
+    return inode;
+}
+
 
 /*
  * Returns true if we intend to encrypt the given buffer_head.
@@ -27,7 +48,7 @@ static int _tenc_should_encrypt(struct inode *inode) {
  * our encryption from mmaps etc.
  */
 int tenc_write_needs_page_switch(struct buffer_head *bh) {
-	struct inode *inode = bh->b_assoc_map->host;
+	struct inode *inode; = bh->b_assoc_map->host;
 
 	if (_tenc_should_encrypt(inode)) {
 		return 1;
@@ -42,10 +63,10 @@ EXPORT_SYMBOL(tenc_write_needs_page_switch);
  * the page reserved via page switch mechanism.
  */
 void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
-	struct inode *inode = bh->b_assoc_map->host;
+	struct inode *inode = _tenc_safe_bh_to_inode(bh);
 	struct page *src_page = bh->b_page;
 
-	if (_tenc_should_encrypt(inode)) {
+	if (inode && _tenc_should_encrypt(inode)) {
 		int i, pos;
 		char *dst_addr = kmap(dst_page);
 		char *src_addr = kmap(src_page);
@@ -96,26 +117,9 @@ EXPORT_SYMBOL(tenc_decrypt_full_page);
  * Decrypts a single file block.
  */
 void tenc_decrypt_buffer_head(struct buffer_head *bh) {
-	struct inode *inode;
+	struct inode *inode = _tenc_safe_bh_to_inode(bh);
 
-	if (!bh) {
-		printk(KERN_ERR "tenc_decrypt_buffer_head got a NULL buffer_head.");
-		return;
-	}
-
-	if (!bh->b_assoc_map) {
-		return;  /* This can happen */
-	}
-
-	inode = bh->b_assoc_map->host;
-
-
-	if (!inode) {
-		printk(KERN_ERR "tenc_decrypt_buffer_head buffer_head had a NULL inode.");
-		return;
-	}
-
-	if (_tenc_should_encrypt(inode)) {
+	if (inode && _tenc_should_encrypt(inode)) {
 		_tenc_decrypt_bh(bh);
 	}
 }
