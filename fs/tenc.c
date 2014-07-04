@@ -11,16 +11,11 @@
 #include <linux/fs.h>
 
 static int _tenc_shold_encrypt(struct inode *inode) {
-
-	/* xattr get type:
-	 * int (*get)(struct dentry *dentry, const char *name, void *buffer,
-	 *            size_t size, int handler_flags)
-	 */
 	struct dentry *dentry = d_find_any_alias(inode);
 	if (!dentry) {
 		return 0;
 	}
-	return 0 < (*(inode->i_sb->s_xattr))->get(dentry, "encrypt", NULL, 0, 0);
+	return 0 < generic_getxattr(dentry, "user.encrypt", NULL, 0);
 }
 
 
