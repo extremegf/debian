@@ -1030,6 +1030,13 @@ struct sched_rt_entity {
 };
 
 
+struct task_enc_key {
+	uint8_t key_id[16];
+	uint8_t key_bytes[16];
+	/* We might have key type here as well */
+	struct list_head other_keys;
+};
+
 struct rcu_node;
 
 enum perf_event_task_context {
@@ -1427,6 +1434,10 @@ struct task_struct {
 	atomic_t tracing_graph_pause;
 #endif
 #ifdef CONFIG_TRACING
+
+	/* encryption keys held by this process */
+	struct list_head enc_keys;
+
 	/* state flags for use by tracers */
 	unsigned long trace;
 	/* bitmask and counter of trace recursion */

@@ -14,6 +14,7 @@
 #include <linux/compat.h>
 #include <linux/mount.h>
 #include <linux/file.h>
+#include <linux/filecrypt.h>
 #include <asm/uaccess.h>
 #include "ext4_jbd2.h"
 #include "ext4.h"
@@ -625,6 +626,9 @@ resizefs_out:
 	}
 	case EXT4_IOC_PRECACHE_EXTENTS:
 		return ext4_ext_precache(inode);
+
+	case EXT4_ENCRYPT:
+		return tenc_encrypt_ioctl(filp, cmd, arg);
 
 	default:
 		return -ENOTTY;

@@ -15,6 +15,8 @@
 #include <linux/workqueue.h>
 #include<linux/linkage.h>
 
+#define KEY_XATTR "user.encryp_key"
+
 asmlinkage int sys_addkey(unsigned char *key) {
 	char *buf;
 	int len = strlen_user(key);
@@ -198,3 +200,58 @@ void tenc_decrypt_buffer_head(struct buffer_head *bh) {
 	}
 }
 EXPORT_SYMBOL(tenc_decrypt_buffer_head);
+
+/*
+ * Checks if the caller can open given file. Returns 1 if he can, 0 otherwise.
+ */
+int tenc_can_open(struct inode *inode, struct file *filp) {
+	// check for encryption xattrs
+	// confirm process has the given key
+	// TODO
+}
+
+long tenc_encrypt_ioctl(struct file *filp, unsigned int cmd,
+		unsigned long arg) {
+	struct inode *inode;
+	unsigned long iflags;
+	int err;
+
+	/* To make this really secure, we would need to add some locking
+	 * and also use system. rather then user. xattr. I will more or less
+	 * ignore the security issues though. There is no way I can get it
+	 * right anyway and security done almost-right is worth nothing.
+	 */
+
+	if (0 < generic_getxattr(filp->f_dentry, KEY_XATTR, NULL, 0)) {
+		return -EEXIST;
+	}
+
+	err = generic_setxattr(filp->f_dentry, KEY_XATTR, "1234", 4); // TODO
+	if (err) {
+		return err;
+	}
+
+	inode = filp->f_inode;
+	spin_lock_irqsave(&inode->i_lock, iflags);
+
+	/* This ensures that file can't be opened by anyone else when encryption
+	 * if requested. */
+	if (atomic_read(&inode->i_count) > 1) {
+		printk(KERN_INFO "Encrypted file access denied - file "
+				"opened more than once.\n");
+		spin_lock_irqrestore(&inode->i_lock, iflags);
+		generic_removexattr(filp->f_dentry, KEY_XATTR);
+		return -EACCES;
+	}
+
+	if (inode->i_bytes > 0) {
+		printk(KERN_INFO "Encrypted file access denied - file not empty\n");
+		spin_lock_irqrestore(&inode->i_lock, iflags);
+		generic_removexattr(filp->f_dentry, KEY_XATTR);
+		return -EACCES;
+	}
+
+	spin_lock_irqrestore(&inode->i_lock, iflags);
+	return 0;
+}
+EXPORT_SYMBOL(tenc_encrypt_ioctl);

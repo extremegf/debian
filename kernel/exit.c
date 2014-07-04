@@ -832,6 +832,8 @@ void do_exit(long code)
 	 */
 	tsk->flags |= PF_EXITPIDONE;
 
+	exit_task_enc_keys(tsk);
+
 	if (tsk->io_context)
 		exit_io_context(tsk);
 
