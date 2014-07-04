@@ -21,7 +21,7 @@ void exit_task_enc_keys(struct task_struct *tsk) {
 		struct task_enc_key *key;
 		key = list_entry(pos, struct task_enc_key, other_keys);
 
-		list_del(&key->other_keys);
+		list_del(pos);
 		kfree(key);
 	}
 }
