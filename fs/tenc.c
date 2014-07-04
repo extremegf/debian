@@ -13,7 +13,10 @@
 #include <linux/printk.h>
 #include <linux/ratelimit.h>
 
-static DEFINE_SPINLOCK(atomic_kmap_lock);
+struct page_decrypt_work {
+  struct work_struct work;
+
+};
 
 static int _tenc_should_encrypt(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
@@ -105,36 +108,6 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 }
 EXPORT_SYMBOL(tenc_encrypt_block);
 
-/*
- * Decrypts a single file block. No checks.
- */
-static void _tenc_decrypt_bh(struct buffer_head *bh) {
-	struct page *page = bh->b_page;
-	int i, pos;
-	char *addr;
-	unsigned long flags;
-
-	printk(KERN_INFO "decrypting bh %d of length %d\n",
-			(int)_tenc_page_pos_to_blknr(page, page->mapping->host, bh_offset(bh)),
-			(int)bh->b_size);
-
-	/* A bunch of bios may end almost at once (like 12000).
-	 * If they all come in here and call kmap_atomic, we will get
-	 * a fatal kernel Oops. The local_irq_save, disables this for the
-	 * current core, while others still may handle interrupt, so we get
-	 * SMP but without the risk of kmap_atomic fail.
-	 *
-	 * Update: Disabling IRQ is not enough. We still get fatal Oops.
-	 * Apparently we need a critical section here.
-	 */
-//	spin_lock_irqsave(&atomic_kmap_lock, flags);
-//    addr = kmap_atomic(page);
-//	for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
-//		addr[pos] = ~addr[pos];
-//	}
-//	kunmap_atomic(addr);
-//	spin_unlock_irqrestore(&atomic_kmap_lock, flags);
-}
 
 /*
  * Decrypts blocks associated with this page. The should be only one
@@ -151,7 +124,7 @@ void tenc_decrypt_page(struct page *page, unsigned int offset,
 		printk(KERN_INFO "decrypting page bl. %d of length %d\n",
 				(int)_tenc_page_pos_to_blknr(page, inode, offset),
 				(int)len);
-		/* See comment above */
+
 //		spin_lock_irqsave(&atomic_kmap_lock, flags);
 //		addr = kmap_atomic(page);
 //		for (i = 0, pos = offset; i < len; i++, pos++) {
@@ -164,13 +137,19 @@ void tenc_decrypt_page(struct page *page, unsigned int offset,
 EXPORT_SYMBOL(tenc_decrypt_page);
 
 /*
- * Decrypts a single file block.
+ * Decrypts a single file block. Special case for pages containing
+ * non-continous series of blocks (end of file does not count).
  */
 void tenc_decrypt_buffer_head(struct buffer_head *bh) {
 	struct inode *inode = _tenc_safe_bh_to_inode(bh);
 
 	if (inode && _tenc_should_encrypt(inode)) {
-		_tenc_decrypt_bh(bh);
+		/* Unimplemented.
+		 *
+		 * This is only necessary on machines where disk block size != PAGE_SIZE.
+		 * The virtual machine we use has this property.
+		 */
+		BUG();
 	}
 }
 EXPORT_SYMBOL(tenc_decrypt_buffer_head);
