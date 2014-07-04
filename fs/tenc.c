@@ -11,9 +11,10 @@
 #include <linux/fs.h>
 #include <linux/xattr.h>
 
-static int _tenc_shold_encrypt(struct inode *inode) {
+static int _tenc_should_encrypt(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
 	if (!dentry) {
+		printk(KERN_WARNING "_tenc_should_encrypt did not found an inode for inode.");
 		return 0;
 	}
 	return 0 < generic_getxattr(dentry, "user.encrypt", NULL, 0);
@@ -28,7 +29,7 @@ static int _tenc_shold_encrypt(struct inode *inode) {
 int tenc_write_needs_page_switch(struct buffer_head *bh) {
 	struct inode *inode = bh->b_assoc_map->host;
 
-	if (_tenc_shold_encrypt(inode)) {
+	if (_tenc_should_encrypt(inode)) {
 		return 1;
 	}
 	return 0;
@@ -44,7 +45,7 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 	struct inode *inode = bh->b_assoc_map->host;
 	struct page *src_page = bh->b_page;
 
-	if (_tenc_shold_encrypt(inode)) {
+	if (_tenc_should_encrypt(inode)) {
 		int i, pos;
 		char *dst_addr = kmap(dst_page);
 		char *src_addr = kmap(src_page);
@@ -81,7 +82,7 @@ static void _tenc_decrypt_bh(struct buffer_head *bh) {
 void tenc_decrypt_full_page(struct page *page) {
 	struct inode *inode = page->mapping->host;
 
-	if (_tenc_shold_encrypt(inode)) {
+	if (_tenc_should_encrypt(inode)) {
 		struct buffer_head *bh, *head;
 		head = bh = page_buffers(page);
 		do {
@@ -95,9 +96,21 @@ EXPORT_SYMBOL(tenc_decrypt_full_page);
  * Decrypts a single file block.
  */
 void tenc_decrypt_buffer_head(struct buffer_head *bh) {
-	struct inode *inode = bh->b_assoc_map->host;
+	struct inode *inode;
 
-	if (_tenc_shold_encrypt(inode)) {
+	if (!bh) {
+		printk(KERN_ERR "tenc_decrypt_buffer_head got a NULL buffer_head.");
+		return;
+	}
+
+	inode = bh->b_assoc_map->host;
+
+	if (!inode) {
+		printk(KERN_ERR "tenc_decrypt_buffer_head buffer_head had a NULL inode.");
+		return;
+	}
+
+	if (_tenc_should_encrypt(inode)) {
 		_tenc_decrypt_bh(bh);
 	}
 }
