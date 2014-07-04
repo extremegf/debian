@@ -124,16 +124,16 @@ static void _tenc_decrypt_bh(struct buffer_head *bh) {
 	 * current core, while others still may handle interrupt, so we get
 	 * SMP but without the risk of kmap_atomic fail.
 	 *
-	 * Update: Disabling IRQ is not enough. Apparently we need a critical
-	 * section here.
+	 * Update: Disabling IRQ is not enough. We still get fatal Oops.
+	 * Apparently we need a critical section here.
 	 */
-	spin_lock_irqsave(&atomic_kmap_lock, flags);
-    addr = kmap_atomic(page);
-	for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
-		addr[pos] = ~addr[pos];
-	}
-	kunmap_atomic(addr);
-	spin_unlock_irqrestore(&atomic_kmap_lock, flags);
+//	spin_lock_irqsave(&atomic_kmap_lock, flags);
+//    addr = kmap_atomic(page);
+//	for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
+//		addr[pos] = ~addr[pos];
+//	}
+//	kunmap_atomic(addr);
+//	spin_unlock_irqrestore(&atomic_kmap_lock, flags);
 }
 
 /*
@@ -152,13 +152,13 @@ void tenc_decrypt_page(struct page *page, unsigned int offset,
 				(int)_tenc_page_pos_to_blknr(page, inode, offset),
 				(int)len);
 		/* See comment above */
-		spin_lock_irqsave(&atomic_kmap_lock, flags);
-		addr = kmap_atomic(page);
-		for (i = 0, pos = offset; i < len; i++, pos++) {
-			addr[pos] = ~addr[pos];
-		}
-		kunmap_atomic(addr);
-		spin_unlock_irqrestore(&atomic_kmap_lock, flags);
+//		spin_lock_irqsave(&atomic_kmap_lock, flags);
+//		addr = kmap_atomic(page);
+//		for (i = 0, pos = offset; i < len; i++, pos++) {
+//			addr[pos] = ~addr[pos];
+//		}
+//		kunmap_atomic(addr);
+//		spin_unlock_irqrestore(&atomic_kmap_lock, flags);
 	}
 }
 EXPORT_SYMBOL(tenc_decrypt_page);
