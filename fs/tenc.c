@@ -80,6 +80,7 @@ struct page_decrypt_work {
 
 static int _tenc_should_encrypt(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
+	int res;
 	if (!dentry) {
 		// printk(KERN_WARNING
 		// 	 	  "_tenc_should_encrypt did not found an dentry for inode.\n");
@@ -89,7 +90,30 @@ static int _tenc_should_encrypt(struct inode *inode) {
 	// mpage_end_io + 0x6b
 	// printk_ratelimited(KERN_WARNING "generic_getxattr returned = %d\n",
 	//                    generic_getxattr(dentry, "user.encrypt", NULL, 0));
-	return 0 < generic_getxattr(dentry, "user.encrypt", NULL, 0);
+	res = 0 < generic_getxattr(dentry, "user.encrypt", NULL, 0);
+	dput(dentry);
+	return res;
+}
+
+/* Does not grant ownership of the pointer. */
+static unsigned char *_tenc_find_task_key(struct inode *inode,
+		unsigned char key_id[MD5_LENGTH]) {
+	struct list_head *pos;
+	unsigned long flags;
+	struct task_enc_key *key;
+
+	BUG_ON(sizeof(key->key_id) != MD5_LENGTH);
+
+	spin_lock_irqsave(&current->enc_keys_lock, flags);
+	list_for_each(pos, &current->enc_keys) {
+		key = list_entry(pos, struct task_enc_key, other_keys);
+		if (memcmp(key->key_id, key_id, MD5_LENGTH) == 0) {
+			spin_unlock_irqrestore(&current->enc_keys_lock, flags);
+			return key->key_bytes;
+		}
+	}
+	spin_unlock_irqrestore(&current->enc_keys_lock, flags);
+	return NULL;
 }
 
 static struct inode *_tenc_safe_bh_to_inode(struct buffer_head *bh) {
@@ -247,14 +271,16 @@ EXPORT_SYMBOL(tenc_decrypt_buffer_head);
  * Checks if the caller can open given file. Returns 1 if he can, 0 otherwise.
  */
 int tenc_can_open(struct inode *inode, struct file *filp) {
-	// check for encryption xattrs
-	// confirm process has the given key
-	// TODO
+	int atr_len = generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0);
+	if (atr_len > 0) {
+
+	}
+
 	return 1;
 }
 EXPORT_SYMBOL(tenc_can_open);
 
-long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[16]) {
+long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	struct inode *inode;
 	unsigned long iflags;
 	int err;
@@ -269,7 +295,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[16]) {
 		return -EEXIST;
 	}
 
-	err = generic_setxattr(filp->f_dentry, KEY_ID_XATTR, "1234", 4, 0); // TODO
+	err = generic_setxattr(filp->f_dentry, KEY_ID_XATTR, key_id, MD5_LENGTH, 0);
 	if (err) {
 		return err;
 	}

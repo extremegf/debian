@@ -39,10 +39,13 @@ int copy_enc_keys(unsigned long clone_flags, struct task_struct *tsk) {
 		}
 
 		key = list_entry(pos, struct task_enc_key, other_keys);
-		memcpy(key_copy->key_bytes, key->key_bytes, sizeof(key->key_bytes));
-		memcpy(key_copy->key_id, key->key_id, sizeof(key->key_id));
+		printk(KERN_INFO "memcpy %p, %p, %d\n",
+				key_copy->key_bytes, key->key_bytes, sizeof(key->key_bytes));
+		printk(KERN_INFO "memcpy %p, %p, %d\n",
+		        key_copy->key_id, key->key_id, sizeof(key->key_id));
 
 		list_add(&key_copy->other_keys, &tsk->enc_keys);
 	}
 	return 0;
 }
+// copy_enc_keys+0x63
