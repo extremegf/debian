@@ -16,7 +16,7 @@
 static int _tenc_should_encrypt(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
 	if (!dentry) {
-		printk(KERN_WARNING "_tenc_should_encrypt did not found an inode for inode.\n");
+		printk(KERN_WARNING "_tenc_should_encrypt did not found an dentry for inode.\n");
 		return 0;
 	}
 
@@ -54,6 +54,12 @@ static struct inode *_tenc_safe_bh_to_inode(struct buffer_head *bh) {
     return inode;
 }
 
+static sector_t _tenc_page_pos_to_blknr(struct page *page, struct inode *inode,
+										unsigned int offset) {
+	sector_t start_blk_nr = (sector_t)page->index <<
+							(PAGE_CACHE_SHIFT - inode->i_blkbits);
+	return start_blk_nr + (offset / (1 << inode->i_blkbits));
+}
 
 /*
  * Returns true if we intend to encrypt the given buffer_head.
@@ -84,7 +90,9 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 		char *dst_addr = kmap(dst_page);
 		char *src_addr = kmap(src_page);
 
-		printk(KERN_INFO "encrypting block %d of length %d\n", (int)bh->b_blocknr, (int)bh->b_size);
+		printk(KERN_INFO "encrypt block %d of length %d\n",
+				(int)_tenc_page_pos_to_blknr(src_addr, inode, bh_offset(bh)),
+				(int)bh->b_size);
 		for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
 			dst_addr[pos] = ~src_addr[pos];
 		}
@@ -103,7 +111,9 @@ static void _tenc_decrypt_bh(struct buffer_head *bh) {
 	int i, pos;
 	char *addr = kmap(page);
 
-	printk(KERN_INFO "decrypting block %d of length %d\n", (int)bh->b_blocknr, (int)bh->b_size);
+	printk(KERN_INFO "decrypting bh %d of length %d\n",
+			(int)_tenc_page_pos_to_blknr(page, page->mapping->host, bh_offset(bh)),
+			(int)bh->b_size);
 	for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
 		addr[pos] = ~addr[pos];
 	}
@@ -115,15 +125,21 @@ static void _tenc_decrypt_bh(struct buffer_head *bh) {
  * Decrypts blocks associated with this page. The should be only one
  * anyway.
  */
-void tenc_decrypt_full_page(struct page *page) {
+void tenc_decrypt_page(struct page *page, unsigned int offset,
+		unsigned int len) {
 	struct inode *inode = page->mapping->host;
 
 	if (_tenc_should_encrypt(inode)) {
-		struct buffer_head *bh, *head;
-		head = bh = page_buffers(page);
-		do {
-			_tenc_decrypt_bh(bh);
-		} while ((bh = bh->b_this_page) != head);
+		int i, pos;
+		char *addr = kmap(page);
+		printk(KERN_INFO "decrypting page bl. %d of length %d\n",
+				(int)_tenc_page_pos_to_blknr(page, inode, offset),
+				(int)len);
+
+		for (i = 0, pos = offset; i < len; i++, pos++) {
+			addr[pos] = ~addr[pos];
+		}
+		kunmap(page);
 	}
 }
 EXPORT_SYMBOL(tenc_decrypt_full_page);
