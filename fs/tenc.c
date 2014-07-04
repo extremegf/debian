@@ -41,14 +41,14 @@ asmlinkage int sys_addkey(unsigned char __user *user_key) {
 	if (!copy_from_user(&tsk_key->key_bytes, user_key,
 			sizeof(tsk_key->key_bytes))) {
 		kfree(tsk_key);
-		printk(KERN_INFO "sys_addkey: copy_from_user failed\n")l
+		printk(KERN_INFO "sys_addkey: copy_from_user failed\n");
 		return -EFAULT;
 	}
 
     tfm = crypto_alloc_hash("md5", 0, CRYPTO_ALG_ASYNC);
 
     if (IS_ERR(tfm)) {
-		printk(KERN_INFO "sys_addkey: crypto_alloc_hash failed\n")l
+		printk(KERN_INFO "sys_addkey: crypto_alloc_hash failed\n");
     	kfree(tsk_key);
 		return -EFAULT;
     }
