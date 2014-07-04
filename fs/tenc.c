@@ -110,17 +110,25 @@ static void _tenc_decrypt_bh(struct buffer_head *bh) {
 	struct page *page = bh->b_page;
 	int i, pos;
 	char *addr;
+	unsigned long flags;
 
 	printk(KERN_INFO "decrypting bh %d of length %d\n",
 			(int)_tenc_page_pos_to_blknr(page, page->mapping->host, bh_offset(bh)),
 			(int)bh->b_size);
 
+	/* A bunch of bios may end almost at once (like 12000).
+	 * If they all come in here and call kmap_atomic, we will get
+	 * a fatal kernel Oops. The local_irq_save, disables this for the
+	 * current core, while others still may handle interrupt, so we get
+	 * SMP but without the risk of kmap_atomic fail.
+	 */
+	local_irq_save(flags);
     addr = kmap_atomic(page);
 	for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
 		addr[pos] = ~addr[pos];
 	}
-
 	kunmap_atomic(addr);
+	local_irq_restore(flags);
 }
 
 /*
@@ -134,14 +142,18 @@ void tenc_decrypt_page(struct page *page, unsigned int offset,
 	if (_tenc_should_encrypt(inode)) {
 		int i, pos;
 		char *addr;
+		unsigned long flags;
 		printk(KERN_INFO "decrypting page bl. %d of length %d\n",
 				(int)_tenc_page_pos_to_blknr(page, inode, offset),
 				(int)len);
+		/* See comment above */
+		local_irq_save(flags);
 		addr = kmap_atomic(page);
 		for (i = 0, pos = offset; i < len; i++, pos++) {
 			addr[pos] = ~addr[pos];
 		}
 		kunmap_atomic(addr);
+		local_irq_restore(flags);
 	}
 }
 EXPORT_SYMBOL(tenc_decrypt_page);
