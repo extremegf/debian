@@ -71,7 +71,7 @@ asmlinkage int sys_addkey(unsigned char *user_key) {
 	spin_unlock_irqrestore(&current->enc_keys_lock, flags);
 	return 0;
 }
-
+EXPORT_SYMBOL(sys_addkey);
 
 struct page_decrypt_work {
 	struct work_struct work;
@@ -142,6 +142,7 @@ int tenc_write_needs_page_switch(struct buffer_head *bh) {
 	}
 	return 0;
 }
+EXPORT_SYMBOL(tenc_write_needs_page_switch);
 
 /*
  * Encrypts the given buffer_head, but uses the dst_page as the destination
@@ -168,6 +169,7 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 		kunmap(dst_page);
 	}
 }
+EXPORT_SYMBOL(tenc_encrypt_block);
 
 static void _tenc_decrypt_page_worker(struct work_struct *_work) {
 	struct page_decrypt_work *work = (struct page_decrypt_work*)_work;
@@ -221,6 +223,7 @@ int tenc_decrypt_page(struct page *page) {
 
 	return TENC_CAN_UNLOCK;
 }
+EXPORT_SYMBOL(tenc_decrypt_page);
 
 /*
  * Decrypts a single file block. Special case for pages containing
@@ -238,6 +241,7 @@ void tenc_decrypt_buffer_head(struct buffer_head *bh) {
 		BUG();
 	}
 }
+EXPORT_SYMBOL(tenc_decrypt_buffer_head);
 
 /*
  * Checks if the caller can open given file. Returns 1 if he can, 0 otherwise.
@@ -248,6 +252,7 @@ int tenc_can_open(struct inode *inode, struct file *filp) {
 	// TODO
 	return 1;
 }
+EXPORT_SYMBOL(tenc_can_open);
 
 long tenc_encrypt_ioctl(struct file *filp, unsigned long arg) {
 	struct inode *inode;
@@ -292,3 +297,4 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned long arg) {
 	spin_unlock_irqrestore(&inode->i_lock, iflags);
 	return 0;
 }
+EXPORT_SYMBOL(tenc_encrypt_ioctl);
