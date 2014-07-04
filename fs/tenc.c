@@ -305,7 +305,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	}
 
 	// TODO initial vector attr
-	IV_XATTR
+	//IV_XATTR
 
 	inode = filp->f_inode;
 	spin_lock_irqsave(&inode->i_lock, iflags);
