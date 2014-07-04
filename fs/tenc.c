@@ -20,8 +20,9 @@
 #include <asm/current.h>
 
 #define KEY_ID_XATTR "user.enc_key_id"
-#define IV_XATTR "user.enc_iv"
 #define MD5_LENGTH 16
+#define IV_XATTR "user.enc_iv"
+#define IV_LENGTH 16
 
 /* Note that the key search and adding are not synchronized. This is
  * intentional. User application shoud
@@ -38,7 +39,7 @@ asmlinkage int sys_addkey(unsigned char __user *user_key) {
 	if (!tsk_key)
 		return -ENOMEM;
 
-	if (!copy_from_user(&tsk_key->key_bytes, user_key,
+	if (copy_from_user(&tsk_key->key_bytes, user_key,
 			sizeof(tsk_key->key_bytes))) {
 		kfree(tsk_key);
 		printk(KERN_INFO "sys_addkey: copy_from_user failed\n");
@@ -287,6 +288,7 @@ EXPORT_SYMBOL(tenc_can_open);
 long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	struct inode *inode;
 	unsigned long iflags;
+	char enc_iv[] = "1234567890123456"; // No point making it really random.
 	int err;
 
 	/* To make this really secure, we would need to add some locking
@@ -305,7 +307,11 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	}
 
 	// TODO initial vector attr
-	//IV_XATTR
+
+	err = generic_setxattr(filp->f_dentry, IV_XATTR, enc_iv, IV_LENGTH, 0);
+	if (err) {
+		return err;
+	}
 
 	inode = filp->f_inode;
 	spin_lock_irqsave(&inode->i_lock, iflags);
