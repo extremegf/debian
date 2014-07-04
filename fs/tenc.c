@@ -12,6 +12,7 @@
 #include <linux/xattr.h>
 #include <linux/printk.h>
 #include <linux/ratelimit.h>
+#include <linux/workqueue.h>
 
 struct page_decrypt_work {
 	struct work_struct work;
@@ -113,24 +114,30 @@ EXPORT_SYMBOL(tenc_encrypt_block);
 static void _tenc_decrypt_page_worker(struct page_decrypt_work *work) {
 	int i, pos;
 	char *addr;
+	struct page* page = work->page;
+	unsigned long len = work->len, offset = work->offset;
+	struct inode *inode = page->mapping->host;
+
 	printk(KERN_INFO "decrypting page bl. %d of length %d\n",
 			(int)_tenc_page_pos_to_blknr(page, inode, offset),
 			(int)len);
 
-//		spin_lock_irqsave(&atomic_kmap_lock, flags);
-//		addr = kmap_atomic(page);
-//		for (i = 0, pos = offset; i < len; i++, pos++) {
-//			addr[pos] = ~addr[pos];
-//		}
-//		kunmap_atomic(addr);
-//		spin_unlock_irqrestore(&atomic_kmap_lock, flags);
+	addr = kmap(page);
+	for (i = 0, pos = offset; i < len; i++, pos++) {
+		addr[pos] = ~addr[pos];
+	}
+	kunmap(page);
 
+	SetPageUptodate(page);
+	unlock_page(page);
+	kfree(work);
 }
 
 /*
  * Schedules decryption of the page if it's necessary.
- * Returns 1 to notify the page read code to leave the page locked and
- * not-Uptodate. Return 0 otherwise.
+ * Returns TENC_LEAVE_LOCKED to notify the page read code to leave the page
+ * locked and not-Uptodate. Returns TENC_DECR_FAIL if it failed to schedule
+ * the work. Return TENC_CAN_UNLOCK if the page can be immediately unlocked.
  */
 int tenc_decrypt_page(struct page *page, unsigned int offset,
 		unsigned int len) {
@@ -139,19 +146,25 @@ int tenc_decrypt_page(struct page *page, unsigned int offset,
 	if (_tenc_should_encrypt(inode)) {
 		struct page_decrypt_work *work;
 		work = kmalloc(sizeof(struct page_decrypt_work), GFP_ATOMIC);
-		    if (work) {
+		if (work) {
+			int err;
+			INIT_WORK((struct work_struct *)work, _tenc_decrypt_page_worker);
 
-		      INIT_WORK( (struct work_struct *)work, my_wq_function );
+			work->page = page;
+			work->offset = offset;
+			work->len = len;
 
-		      work->x = 1;
+			err = schedule_work(work);
 
-		      ret = queue_work( my_wq, (struct work_struct *)work );
-
-		    }
-		return 1;
+			BUG_ON(!err);  /* Fails if the same job is already scheduled */
+			return TENC_LEAVE_LOCKED;
+		}
+		else {
+			return TENC_DECR_FAIL;
+		}
 	}
 
-	return 0;
+	return TENC_CAN_UNLOCK;
 }
 EXPORT_SYMBOL(tenc_decrypt_page);
 
