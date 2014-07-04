@@ -111,7 +111,8 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 }
 EXPORT_SYMBOL(tenc_encrypt_block);
 
-static void _tenc_decrypt_page_worker(struct page_decrypt_work *work) {
+static void _tenc_decrypt_page_worker(struct work_struct *_work) {
+	struct page_decrypt_work *work = (struct page_decrypt_work*)_work;
 	int i, pos;
 	char *addr;
 	struct page* page = work->page;
@@ -154,7 +155,7 @@ int tenc_decrypt_page(struct page *page, unsigned int offset,
 			work->offset = offset;
 			work->len = len;
 
-			err = schedule_work(work);
+			err = schedule_work((struct work_struct *)work);
 
 			BUG_ON(!err);  /* Fails if the same job is already scheduled */
 			return TENC_LEAVE_LOCKED;
