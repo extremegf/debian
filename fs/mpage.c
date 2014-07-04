@@ -53,8 +53,7 @@ static void mpage_end_io(struct bio *bio, int err)
 			prefetchw(&bvec->bv_page->flags);
 		if (bio_data_dir(bio) == READ) {
 			if (uptodate) {
-				int enc_status = tenc_decrypt_page(page, bvec->bv_offset,
-						bvec->bv_len);
+				int enc_status = tenc_decrypt_page(page);
 				if (enc_status == TENC_CAN_UNLOCK) {
 					/* Decryption code is not interested. Unlock immediately */
 					SetPageUptodate(page);

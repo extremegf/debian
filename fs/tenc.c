@@ -29,12 +29,9 @@ asmlinkage int sys_addkey(unsigned char *key) {
 }
 
 
-
 struct page_decrypt_work {
 	struct work_struct work;
 	struct page *page;
-	unsigned int offset;
-	unsigned int len;
 };
 
 static int _tenc_should_encrypt(struct inode *inode) {
@@ -113,14 +110,14 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 	struct page *src_page = bh->b_page;
 
 	if (inode && _tenc_should_encrypt(inode)) {
-		int i, pos;
+		int pos;
 		char *dst_addr = kmap(dst_page);
 		char *src_addr = kmap(src_page);
 
-		printk(KERN_INFO "encrypt block %d of length %d\n",
-				(int)_tenc_page_pos_to_blknr(src_page, inode, bh_offset(bh)),
-				(int)bh->b_size);
-		for (i = 0, pos = bh_offset(bh); i < bh->b_size; i++, pos++) {
+		printk(KERN_INFO "encrypt block %d\n",
+				(int)_tenc_page_pos_to_blknr(src_page, inode, 0));
+
+		for (pos = 0; pos < PAGE_SIZE; pos++) {
 			dst_addr[pos] = ~src_addr[pos];
 		}
 
@@ -132,21 +129,19 @@ EXPORT_SYMBOL(tenc_encrypt_block);
 
 static void _tenc_decrypt_page_worker(struct work_struct *_work) {
 	struct page_decrypt_work *work = (struct page_decrypt_work*)_work;
-	int i, pos;
+	int pos;
 	char *addr;
 	struct page* page = work->page;
-	unsigned long len = work->len, offset = work->offset;
 	struct inode *inode = page->mapping->host;
 
-	printk(KERN_INFO "decrypting page bl. %d of length %d\n",
-			(int)_tenc_page_pos_to_blknr(page, inode, offset),
-			(int)len);
+	printk(KERN_INFO "decrypting page bl. %d\n",
+			(int)_tenc_page_pos_to_blknr(page, inode, 0));
 
-//	addr = kmap(page);
-//	for (i = 0, pos = offset; i < len; i++, pos++) {
-//		addr[pos] = ~addr[pos];
-//	}
-//	kunmap(page);
+	addr = kmap(page);
+	for (pos = 0; pos < PAGE_SIZE; pos++) {
+		addr[pos] = ~addr[pos];
+	}
+	kunmap(page);
 
 	SetPageUptodate(page);
 	unlock_page(page);
@@ -159,8 +154,7 @@ static void _tenc_decrypt_page_worker(struct work_struct *_work) {
  * locked and not-Uptodate. Returns TENC_DECR_FAIL if it failed to schedule
  * the work. Return TENC_CAN_UNLOCK if the page can be immediately unlocked.
  */
-int tenc_decrypt_page(struct page *page, unsigned int offset,
-		unsigned int len) {
+int tenc_decrypt_page(struct page *page) {
 	struct inode *inode = page->mapping->host;
 
 	if (_tenc_should_encrypt(inode)) {
@@ -170,11 +164,8 @@ int tenc_decrypt_page(struct page *page, unsigned int offset,
 			int err;
 			INIT_WORK((struct work_struct *)work, _tenc_decrypt_page_worker);
 
-            printk(KERN_INFO "Adding decryption work page=%p, len=%d, offset=%d\n",
-            		page, len, offset);
+            printk(KERN_INFO "Adding decryption work page=%p\n", page);
 			work->page = page;
-			work->offset = offset;
-			work->len = len;
 
 			err = schedule_work((struct work_struct *)work);
 
