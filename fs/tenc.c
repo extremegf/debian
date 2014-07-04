@@ -33,6 +33,7 @@ asmlinkage int sys_addkey(unsigned char __user *user_key) {
     struct scatterlist sg;
     struct crypto_hash *tfm;
     struct hash_desc desc;
+    int i;
 
 	tsk_key = kmalloc(sizeof(struct task_enc_key), GFP_KERNEL);
 
@@ -67,9 +68,11 @@ asmlinkage int sys_addkey(unsigned char __user *user_key) {
     	return -EFAULT;
     }
 
-//    for (i = 0; i < 16; i++) {
-//        printk(KERN_ERR "%d-%d\n", tsk_key->key_bytes[i], i);
-//    }
+    printk(KERN_INFO "New secret key added to current, key_id=\"");
+    for (i = 0; i < 16; i++) {
+        printk("\\x%02x", tsk_key->key_id[i], i);
+    }
+    printk("\"\n");
 
 	spin_lock_irqsave(&current->enc_keys_lock, flags);
 	list_add(&tsk_key->other_keys, &current->enc_keys);
@@ -277,8 +280,12 @@ EXPORT_SYMBOL(tenc_decrypt_buffer_head);
  */
 int tenc_can_open(struct inode *inode, struct file *filp) {
 	int atr_len = generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0);
-	if (atr_len > 0) {
+	if (atr_len 0= MD5_LENGTH) {
+		return 1;
+	}
 
+	if (atr_len != MD5_LENGTH) {
+		return
 	}
 
 	return 1;
