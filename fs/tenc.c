@@ -15,6 +15,7 @@
 #include <linux/workqueue.h>
 #include <linux/linkage.h>
 #include <linux/crypto.h>
+#include <linux/spinlock.h>
 #include <asm-generic/scatterlist.h>
 #include <asm/current.h>
 
@@ -53,10 +54,10 @@ asmlinkage int sys_addkey(unsigned char *user_key) {
     desc.tfm = tfm;
     desc.flags = 0;
 
-    sg_init_one(&sg, &tsk_key->key_bytes, sizeof(tsk_key->key_bytes));
+    sg_init_one(&sg, tsk_key->key_bytes, sizeof(tsk_key->key_bytes));
     if (!crypto_hash_init(&desc) ||
     		!crypto_hash_update(&desc, &sg, sizeof(tsk_key->key_bytes)) ||
-    		!crypto_hash_final(&desc, &tsk_key->key_id)) {
+    		!crypto_hash_final(&desc, tsk_key->key_id)) {
     	crypto_free_hash(tfm);
     	kfree(tsk_key);
     	return -EFAULT;
@@ -67,7 +68,7 @@ asmlinkage int sys_addkey(unsigned char *user_key) {
 //    }
 
 	spin_lock_irqsave(&current->enc_keys_lock, flags);
-	list_add(&tsk_key->other_keys, current->enc_keys);
+	list_add(&tsk_key->other_keys, &current->enc_keys);
 	spin_unlock_irqrestore(&current->enc_keys_lock, flags);
 	return 0;
 }
@@ -250,6 +251,7 @@ int tenc_can_open(struct inode *inode, struct file *filp) {
 	// check for encryption xattrs
 	// confirm process has the given key
 	// TODO
+	return 1;
 }
 
 long tenc_encrypt_ioctl(struct file *filp, unsigned int cmd,
@@ -268,7 +270,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned int cmd,
 		return -EEXIST;
 	}
 
-	err = generic_setxattr(filp->f_dentry, KEY_XATTR, "1234", 4); // TODO
+	err = generic_setxattr(filp->f_dentry, KEY_XATTR, "1234", 4, 0); // TODO
 	if (err) {
 		return err;
 	}
