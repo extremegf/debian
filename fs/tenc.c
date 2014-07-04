@@ -132,11 +132,11 @@ static void _tenc_decrypt_page_worker(struct work_struct *_work) {
 			(int)_tenc_page_pos_to_blknr(page, inode, offset),
 			(int)len);
 
-	addr = kmap(page);
-	for (i = 0, pos = offset; i < len; i++, pos++) {
-		addr[pos] = ~addr[pos];
-	}
-	kunmap(page);
+//	addr = kmap(page);
+//	for (i = 0, pos = offset; i < len; i++, pos++) {
+//		addr[pos] = ~addr[pos];
+//	}
+//	kunmap(page);
 
 	SetPageUptodate(page);
 	unlock_page(page);
