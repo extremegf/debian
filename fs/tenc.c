@@ -9,6 +9,7 @@
 #include <linux/mm_types.h>
 #include <linux/buffer_head.h>
 #include <linux/fs.h>
+#include <linux/xattr.h>
 
 static int _tenc_shold_encrypt(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
