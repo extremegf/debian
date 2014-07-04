@@ -2707,6 +2707,7 @@ int tenc_write_needs_page_switch(struct buffer_head *bh);
 void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page);
 void tenc_decrypt_buffer_head(struct buffer_head *bh);
 int tenc_decrypt_page(struct page *page);
+int tenc_can_open(struct inode *inode, struct file *filp);
 long tenc_encrypt_ioctl(struct file *filp, unsigned long arg);
 
 
