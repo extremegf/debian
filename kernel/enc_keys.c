@@ -28,7 +28,6 @@ void exit_task_enc_keys(struct task_struct *tsk) {
 
 int copy_enc_keys(unsigned long clone_flags, struct task_struct *tsk) {
 	struct list_head *pos;
-	if (clone_flags & CLONE_FS) {
 	list_for_each(pos, &current->enc_keys) {
 		struct task_enc_key *key, *key_copy;
 
@@ -40,14 +39,12 @@ int copy_enc_keys(unsigned long clone_flags, struct task_struct *tsk) {
 		}
 
 		key = list_entry(pos, struct task_enc_key, other_keys);
-		printk(KERN_INFO "memcpy %p, %p, %d\n",
-				key_copy->key_bytes, key->key_bytes, sizeof(key->key_bytes));
-		printk(KERN_INFO "memcpy %p, %p, %d\n",
-		        key_copy->key_id, key->key_id, sizeof(key->key_id));
+		//printk(KERN_INFO "memcpy %p, %p, %d\n",
+		memcpy(key_copy->key_bytes, key->key_bytes, sizeof(key->key_bytes));
+		//printk(KERN_INFO "memcpy %p, %p, %d\n",
+		memcpy(key_copy->key_id, key->key_id, sizeof(key->key_id));
 
-		//list_add(&key_copy->other_keys, &tsk->enc_keys);
-	}
+		list_add(&key_copy->other_keys, &tsk->enc_keys);
 	}
 	return 0;
 }
-// list *(copy_enc_keys+0x98)
