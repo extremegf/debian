@@ -1433,7 +1433,6 @@ struct task_struct {
 	/* Pause for the tracing */
 	atomic_t tracing_graph_pause;
 #endif
-#ifdef CONFIG_TRACING
 
 	/* encryption keys held by this process and their locking*/
 	// TODO: We cant allow a combination of syscalls and ioctls to corrupt
@@ -1441,6 +1440,7 @@ struct task_struct {
 	spinlock_t enc_keys_lock;
 	struct list_head enc_keys;
 
+#ifdef CONFIG_TRACING
 	/* state flags for use by tracers */
 	unsigned long trace;
 	/* bitmask and counter of trace recursion */
