@@ -283,7 +283,7 @@ int tenc_can_open(struct inode *inode, struct file *filp) {
 	int atr_len = generic_getxattr(filp->f_dentry, KEY_ID_XATTR,
 			user_key_id, MD5_LENGTH);
 
-    if (atr_len == 0) {
+    if (atr_len <= 0) {
     	return 1;
     }
 
