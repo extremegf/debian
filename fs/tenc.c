@@ -356,6 +356,7 @@ void tenc_decrypt_buffer_head(struct buffer_head *bh) {
 		 * The virtual machine we use has this property.
 		 */
 		printk(KERN_ERR "tenc_decrypt_buffer_head: should decrypt but is not implemented");
+		BUG();
 	}
 }
 EXPORT_SYMBOL(tenc_decrypt_buffer_head);
