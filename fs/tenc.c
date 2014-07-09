@@ -286,9 +286,8 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 		printk(KERN_INFO "encrypt block %d\n",
 				(int)_tenc_page_pos_to_blknr(src_page, inode, 0));
 
-		for (pos = 0; pos < PAGE_SIZE; pos++) {
-			dst_addr[pos] = ~src_addr[pos];
-		}
+		memcpy(dst_addr, src_addr, PAGE_SIZE);
+		_tenc_aes128_ctr_page(dst_page);
 
 		kunmap(src_page);
 		kunmap(dst_page);
@@ -299,18 +298,13 @@ EXPORT_SYMBOL(tenc_encrypt_block);
 static void _tenc_decrypt_page_worker(struct work_struct *_work) {
 	struct page_decrypt_work *work = (struct page_decrypt_work*)_work;
 	int pos;
-	char *addr;
 	struct page* page = work->page;
 	struct inode *inode = page->mapping->host;
 
 	printk(KERN_INFO "decrypting page bl. %d\n",
 			(int)_tenc_page_pos_to_blknr(page, inode, 0));
 
-	addr = kmap(page);
-	for (pos = 0; pos < PAGE_SIZE; pos++) {
-		addr[pos] = ~addr[pos];
-	}
-	kunmap(page);
+	_tenc_aes128_ctr_page(page);
 
 	SetPageUptodate(page);
 	unlock_page(page);
