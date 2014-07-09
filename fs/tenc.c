@@ -524,7 +524,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 
 	spin_lock_irqsave(&inode_keys_lock, flags);
 
-
+	inode = filp->f_inode;
 	if (0 < generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0)) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: File is already encrypted\n");
 		spin_unlock_irqrestore(&inode_keys_lock, flags);
@@ -534,7 +534,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	enc_key = _tenc_find_task_key(key_id);
 	if (!enc_key) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: Caller does not have the "
-				"requested key\n", err);
+				"requested key\n");
 		spin_unlock_irqrestore(&inode_keys_lock, flags);
 		return -EPERM;
 	}
@@ -566,7 +566,6 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		return err;
 	}
 
-	inode = filp->f_inode;
 	spin_lock_irqsave(&inode->i_lock, iflags);
 
 	/* This ensures that file can't be opened by anyone else when encryption
