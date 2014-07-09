@@ -341,6 +341,7 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 				(int)_tenc_page_pos_to_blknr(src_page, inode, 0));
 
 		memcpy(dst_addr, src_addr, PAGE_SIZE);
+		dst_page->index = src_page->index;
 		_tenc_aes128_ctr_page(inode, dst_page);
 
 		kunmap(src_page);
