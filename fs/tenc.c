@@ -141,13 +141,6 @@ static int _tenc_encrypted_file(struct inode *inode) {
 	return ikey != NULL;
 }
 
-static void printk_key_id(char *key_id) {
-	int i;
-	for (i=0; i<16; i++) {
-		printk("%02x", (int)key_id[i]);
-	}
-}
-
 /* Does not grant ownership of the pointer. */
 static struct task_enc_key *_tenc_find_task_key(unsigned char key_id[MD5_LENGTH]) {
 	struct list_head *pos;
@@ -568,9 +561,9 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 
 	/* This ensures that file can't be opened by anyone else when encryption
 	 * if requested. This is more to avoid API misuse than for security. */
-	if (atomic_read(&inode->i_count) > 0 ||
-			atomic_read(&inode->i_dio_count) > 0 ||
-			atomic_read(&inode->i_writecount) > 0) {
+	if (atomic_read(&inode->i_count) +
+			atomic_read(&inode->i_dio_count) +
+			atomic_read(&inode->i_writecount) > 1) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file access denied - "
 				"file opened more than once.\n");
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
