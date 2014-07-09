@@ -302,26 +302,41 @@ EXPORT_SYMBOL(tenc_can_open);
 long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	struct inode *inode;
 	unsigned long iflags;
-	char enc_iv[] = "1234567890123456"; // No point making it really random.
+    // TODO: No point making it really random. Will make testing more difficult.
+	// I'm leaving it as is for my final submit.
+	char enc_iv[] = "1234567890123456";
 	int err;
 
-	/* To make this really secure, we would need to add some locking
-	 * and also use system. rather then user. xattr. I will more or less
-	 * ignore the security issues though. There is no way I can get it
-	 * right anyway and security done almost-right is worth nothing.
+	/* TODO: To make this really secure, we would need to ensure that malicious
+	 * process can't do the following sequence:
+	 *
+	 *  - remove xattrs after the encrypting process calls open
+	 *  - open the file itself
+	 *  - mmap it
+	 *  - reattach the xattrs so that the future decryption of pages succeeds
+	 *
+	 * We would need to use system rather then user xattr prefix. I will more
+	 * or less ignore these security issues though. There is no way I can get it
+	 * right without community input and security done almost-right is
+	 * worth nothing anyway.
 	 */
 
 	if (0 < generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0)) {
+		printk(KERN_INFO "tenc_encrypt_ioctl: File is already encrypted\n");
 		return -EEXIST;
 	}
 
 	err = generic_setxattr(filp->f_dentry, KEY_ID_XATTR, key_id, MD5_LENGTH, 0);
 	if (err) {
+		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file generic_setxattr "
+				"returned %d\n", err);
 		return err;
 	}
 
 	err = generic_setxattr(filp->f_dentry, IV_XATTR, enc_iv, IV_LENGTH, 0);
 	if (err) {
+		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file generic_setxattr "
+				"returned %d\n", err);
 		return err;
 	}
 
@@ -329,10 +344,10 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	spin_lock_irqsave(&inode->i_lock, iflags);
 
 	/* This ensures that file can't be opened by anyone else when encryption
-	 * if requested. */
+	 * if requested. This is more to avoid API misuse than for security. */
 	if (atomic_read(&inode->i_count) > 1) {
-		printk(KERN_INFO "Encrypted file access denied - file "
-				"opened more than once.\n");
+		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file access denied - "
+				"file opened more than once.\n");
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
 		generic_removexattr(filp->f_dentry, IV_XATTR);
@@ -340,7 +355,8 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	}
 
 	if (inode->i_bytes > 0) {
-		printk(KERN_INFO "Encrypted file access denied - file not empty\n");
+		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file access denied - "
+				"file not empty\n");
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
 		generic_removexattr(filp->f_dentry, IV_XATTR);
