@@ -638,7 +638,7 @@ asmlinkage void __init start_kernel(void)
 	cpuset_init();
 	taskstats_init_early();
 	delayacct_init();
-	//enc_keys_task_init(&init_task);
+	enc_keys_task_init(&init_task);
 
 	check_bugs();
 
