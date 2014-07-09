@@ -522,20 +522,36 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	 * worth nothing anyway.
 	 */
 
-	spin_lock_irqsave(&inode_keys_lock, flags);
-
-	inode = filp->f_inode;
 	if (0 < generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0)) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: File is already encrypted\n");
-		spin_unlock_irqrestore(&inode_keys_lock, flags);
 		return -EEXIST;
 	}
+
+	err = generic_setxattr(filp->f_dentry, KEY_ID_XATTR, key_id, MD5_LENGTH, 0);
+	if (err) {
+		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file generic_setxattr "
+				"returned %d\n", err);
+		return err;
+	}
+
+	err = generic_setxattr(filp->f_dentry, IV_XATTR, enc_iv, AES_BLOCK_SIZE, 0);
+	if (err) {
+		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file generic_setxattr "
+				"returned %d\n", err);
+		return err;
+	}
+
+	inode = filp->f_inode;
+
+	spin_lock_irqsave(&inode_keys_lock, flags);
 
 	enc_key = _tenc_find_task_key(key_id);
 	if (!enc_key) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: Caller does not have the "
 				"requested key\n");
 		spin_unlock_irqrestore(&inode_keys_lock, flags);
+		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
+		generic_removexattr(filp->f_dentry, IV_XATTR);
 		return -EPERM;
 	}
 	else {
@@ -545,25 +561,11 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
     			printk(KERN_WARNING "Not enough memory to open encrypted "
     					"file.\n");
     			spin_unlock_irqrestore(&inode_keys_lock, flags);
+    			generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
+    			generic_removexattr(filp->f_dentry, IV_XATTR);
     			return -ENOMEM;
     		}
 		}
-	}
-
-	err = generic_setxattr(filp->f_dentry, KEY_ID_XATTR, key_id, MD5_LENGTH, 0);
-	if (err) {
-		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file generic_setxattr "
-				"returned %d\n", err);
-		spin_unlock_irqrestore(&inode_keys_lock, flags);
-		return err;
-	}
-
-	err = generic_setxattr(filp->f_dentry, IV_XATTR, enc_iv, AES_BLOCK_SIZE, 0);
-	if (err) {
-		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file generic_setxattr "
-				"returned %d\n", err);
-		spin_unlock_irqrestore(&inode_keys_lock, flags);
-		return err;
 	}
 
 	spin_lock_irqsave(&inode->i_lock, iflags);
