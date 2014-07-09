@@ -133,19 +133,12 @@ struct page_decrypt_work {
 };
 
 static int _tenc_encrypted_file(struct inode *inode) {
-	struct dentry *dentry = d_find_any_alias(inode);
-    int atr_len;
-
-	if (!dentry) {
-		// printk(KERN_WARNING
-		 	 	  "_tenc_encrypted_file did not found an dentry for inode.\n");
-		return 0;
-	}
-
-	atr_len = generic_getxattr(dentry, KEY_ID_XATTR, NULL, 0);
-
-	dput(dentry);
-	return atr_len == MD5_LENGTH;
+	unsigned long flags;
+	struct inode_key *ikey;
+	spin_lock_irqsave(&inode_keys_lock, flags);
+	ikey = _tenc_find_inode_key(inode);
+	spin_unlock_irqrestore(&inode_keys_lock, flags);
+	return ikey != NULL;
 }
 
 static void printk_key_id(char *key_id) {
@@ -497,7 +490,7 @@ void tenc_release(struct inode *inode, struct file *filp) {
 	}
 	spin_unlock_irqrestore(&inode_keys_lock, flags);
 }
-EXPORT_SYMBOL(tenc_can_open);
+EXPORT_SYMBOL(tenc_release);
 
 long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	struct inode *inode;
