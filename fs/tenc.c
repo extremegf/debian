@@ -296,7 +296,6 @@ EXPORT_SYMBOL(tenc_encrypt_block);
 
 static void _tenc_decrypt_page_worker(struct work_struct *_work) {
 	struct page_decrypt_work *work = (struct page_decrypt_work*)_work;
-	int pos;
 	struct page* page = work->page;
 	struct inode *inode = page->mapping->host;
 
@@ -377,9 +376,8 @@ int tenc_can_open(struct inode *inode, struct file *filp) {
     if (atr_len == MD5_LENGTH) {
     	if(_tenc_find_task_key(user_key_id)) {
     		printk(KERN_INFO "Key found. Allowing to open the file.\n");
+    		return 1;
     	}
-
-    	return 1;
     }
 
 	return 0;
