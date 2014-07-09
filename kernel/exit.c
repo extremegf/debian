@@ -742,7 +742,7 @@ void do_exit(long code)
 	}
 
 	exit_signals(tsk);  /* sets PF_EXITING */
-	exit_task_enc_keys(tsk);
+//	exit_task_enc_keys(tsk);
 	/*
 	 * tsk->flags are checked in the futex code to protect against
 	 * an exiting task cleaning up the robust pi futexes.
