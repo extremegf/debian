@@ -631,6 +631,7 @@ resizefs_out:
 	{
 		struct ext4_ioctl_encrypt __user *user_encrypt = (void*)arg;
 		struct ext4_ioctl_encrypt encrypt;
+		kprintf("got a ioctl EXT4_ENCRYPT\n");
 		if (!copy_from_user(&encrypt, user_encrypt,
 				sizeof(struct ext4_ioctl_encrypt))) {
 			return -EFAULT;
