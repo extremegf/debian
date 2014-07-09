@@ -232,7 +232,7 @@ int tenc_file_is_encrypted(struct inode *inode) {
 	}
 	return 0;
 }
-EXPORT_SYMBOL(tenc_write_needs_page_switch);
+EXPORT_SYMBOL(tenc_file_is_encrypted);
 
 static void _tenc_aes128_ctr_page(struct inode *inode, struct page *page) {
 	struct dentry *dentry = d_find_any_alias(inode);
@@ -307,10 +307,6 @@ static void _tenc_aes128_ctr_page(struct inode *inode, struct page *page) {
 	for (j = 0; j < AES_BLOCK_SIZE; j++) {
 		iv[j] ^= cb.bytes[j];
 	}
-
-	printk("de/encrypting block %d with iv: ", _tenc_page_pos_to_blknr(page, inode, 0));
-	printk_key_id(iv);
-	printk("\n");
 
 	addr = kmap(page);
 

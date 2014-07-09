@@ -635,6 +635,10 @@ resizefs_out:
 				sizeof(struct ext4_ioctl_encrypt))) {
 			return -EFAULT;
 		}
+		/* We do not support encryption of inode inline data. This
+		 * has to be disabled in ext4 specific context.
+		 */
+		ext4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
 		return tenc_encrypt_ioctl(filp, encrypt.key_id);
 	}
 
