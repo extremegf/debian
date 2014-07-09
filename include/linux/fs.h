@@ -2710,6 +2710,7 @@ extern int tenc_decrypt_page(struct page *page);
 extern int tenc_can_open(struct inode *inode, struct file *filp);
 extern void tenc_release(struct inode *inode, struct file *filp);
 extern long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[16]);
+extern int tenc_file_is_encrypted(struct inode *inode);
 
 
 /*

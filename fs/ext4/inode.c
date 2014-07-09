@@ -3219,6 +3219,12 @@ static ssize_t ext4_direct_IO(int rw, struct kiocb *iocb,
 	if (ext4_should_journal_data(inode))
 		return 0;
 
+	/*
+	 * Direct IO not supported on encrypted files.
+	 */
+	if (tenc_file_is_encrypted(inode))
+		return 0;
+
 	/* Let buffer I/O handle the inline data case. */
 	if (ext4_has_inline_data(inode))
 		return 0;

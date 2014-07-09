@@ -223,6 +223,17 @@ int tenc_write_needs_page_switch(struct buffer_head *bh) {
 }
 EXPORT_SYMBOL(tenc_write_needs_page_switch);
 
+/*
+ * Returns true if file is encrypted
+ */
+int tenc_file_is_encrypted(struct inode *inode) {
+	if (inode && _tenc_encrypted_file(inode)) {
+		return 1;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(tenc_write_needs_page_switch);
+
 static void _tenc_aes128_ctr_page(struct inode *inode, struct page *page) {
 	struct dentry *dentry = d_find_any_alias(inode);
     int i, pos, j;
@@ -515,6 +526,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 
 	spin_lock_irqsave(&inode_keys_lock, flags);
 
+
 	if (0 < generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0)) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: File is already encrypted\n");
 		spin_unlock_irqrestore(&inode_keys_lock, flags);
@@ -561,6 +573,9 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		spin_unlock_irqrestore(&inode_keys_lock, flags);
 		return -EACCES;
 	}
+
+	/* We do not support encryption of inode inline data */
+	ext4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
 
 	spin_unlock_irqrestore(&inode_keys_lock, flags);
 	spin_unlock_irqrestore(&inode->i_lock, iflags);
