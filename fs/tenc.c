@@ -94,7 +94,7 @@ struct page_decrypt_work {
 
 static int _tenc_encrypted_file(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
-    int atr_le;
+    int atr_len;
 
 	if (!dentry) {
 		// printk(KERN_WARNING
@@ -102,7 +102,7 @@ static int _tenc_encrypted_file(struct inode *inode) {
 		return 0;
 	}
 
-	int atr_len = generic_getxattr(dentry, KEY_ID_XATTR, NULL, 0);
+	atr_len = generic_getxattr(dentry, KEY_ID_XATTR, NULL, 0);
 
 	dput(dentry);
 	return atr_len == MD5_LENGTH;
@@ -226,13 +226,13 @@ void _tenc_aes128_ctr_page(struct inode *inode ,struct page *page) {
 
 	if (IS_ERR(cipher)) {
 		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
-				"Could not allocate cipher. err=%d\n", PTR_ERR(cipher));
+				"Could not allocate cipher. err=%ld\n", PTR_ERR(cipher));
 		return;
 	}
 
 	if (crypto_cipher_setkey(cipher, enc_key, KEY_LENGTH)) {
 		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
-				"Failed to set key crypto_cipher_setkey. err=%d\n",
+				"Failed to set key crypto_cipher_setkey. err=%ld\n",
 				PTR_ERR(cipher));
 		crypto_free_cipher(cipher);
 		return;
@@ -279,7 +279,6 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 	struct page *src_page = bh->b_page;
 
 	if (inode && _tenc_encrypted_file(inode)) {
-		int pos;
 		char *dst_addr = kmap(dst_page);
 		char *src_addr = kmap(src_page);
 
@@ -287,7 +286,7 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 				(int)_tenc_page_pos_to_blknr(src_page, inode, 0));
 
 		memcpy(dst_addr, src_addr, PAGE_SIZE);
-		_tenc_aes128_ctr_page(dst_page);
+		_tenc_aes128_ctr_page(inode, dst_page);
 
 		kunmap(src_page);
 		kunmap(dst_page);
@@ -304,7 +303,7 @@ static void _tenc_decrypt_page_worker(struct work_struct *_work) {
 	printk(KERN_INFO "decrypting page bl. %d\n",
 			(int)_tenc_page_pos_to_blknr(page, inode, 0));
 
-	_tenc_aes128_ctr_page(page);
+	_tenc_aes128_ctr_page(inode, page);
 
 	SetPageUptodate(page);
 	unlock_page(page);
