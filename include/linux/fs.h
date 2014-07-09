@@ -559,10 +559,11 @@ struct inode {
 	struct timespec		i_atime;
 	struct timespec		i_mtime;
 	struct timespec		i_ctime;
-	spinlock_t		i_lock;	/* i_blocks, i_bytes, maybe i_size */
+	spinlock_t		i_lock;	/* i_blocks, i_bytes, i_enc_key, maybe i_size */
 	unsigned short          i_bytes;
 	unsigned int		i_blkbits;
 	blkcnt_t		i_blocks;
+	struct task_enc_key i_enc_key;
 
 #ifdef __NEED_I_SIZE_ORDERED
 	seqcount_t		i_size_seqcount;

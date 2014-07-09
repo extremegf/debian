@@ -16,6 +16,7 @@
 #include <linux/linkage.h>
 #include <linux/crypto.h>
 #include <linux/spinlock.h>
+#include <linux/list.h>
 #include <linux/scatterlist.h>
 #include <crypto/aes.h>
 #include <asm/current.h>
@@ -29,6 +30,45 @@ union counter_bytes {
 	unsigned long counter;
 	char bytes[AES_BLOCK_SIZE];
 };
+
+struct inode_key {
+	struct inode *inode;
+	uint8_t key_bytes[KEY_LENGTH];
+	uint8_t key_id[MD5_LENGTH];
+
+	struct list_head other;
+};
+
+LIST_HEAD(inode_keys);
+spinlock_t inode_keys_lock;
+
+static struct inode_key *_tenc_find_inode_key(struct inode *inode) {
+	struct inode_key *ikey;
+	struct list_head *pos;
+	list_for_each(pos, &inode_keys) {
+		ikey = list_entry(pos, struct inode_key, other);
+		if (ikey->inode == inode)
+			return ikey;
+	}
+	return NULL;
+}
+
+static struct inode_key *_tenc_add_inode_key(struct inode *inode,
+		struct task_enc_key *task_key) {
+	struct inode_key *ikey = kmalloc(sizeof(struct inode_key), GFP_KERNEL);
+	if (!ikey)
+		return ikey;
+	memcpy(ikey->key_bytes, task_key->key_bytes, KEY_LENGTH);
+	memcpy(ikey->key_id, task_key->key_id, MD5_LENGTH);
+	ikey->inode = inode;
+	list_add(&ikey->other, &inode_keys);
+	return ikey;
+}
+
+static void _tenc_del_inode_key(struct inode_key *ikey) {
+	list_del(&ikey->other);
+	kfree(ikey);
+}
 
 /* Note that the key search and adding are not synchronized. This is
  * intentional. User application shoud
@@ -98,7 +138,7 @@ static int _tenc_encrypted_file(struct inode *inode) {
 
 	if (!dentry) {
 		// printk(KERN_WARNING
-		// 	 	  "_tenc_encrypted_file did not found an dentry for inode.\n");
+		 	 	  "_tenc_encrypted_file did not found an dentry for inode.\n");
 		return 0;
 	}
 
@@ -111,12 +151,12 @@ static int _tenc_encrypted_file(struct inode *inode) {
 static void printk_key_id(char *key_id) {
 	int i;
 	for (i=0; i<16; i++) {
-		printk("%x", key_id[i]);
+		printk("%20x", (int)key_id[i]);
 	}
 }
 
 /* Does not grant ownership of the pointer. */
-static unsigned char *_tenc_find_task_key(unsigned char key_id[MD5_LENGTH]) {
+static struct task_enc_key *_tenc_find_task_key(unsigned char key_id[MD5_LENGTH]) {
 	struct list_head *pos;
 	unsigned long flags;
 	struct task_enc_key *key;
@@ -132,7 +172,7 @@ static unsigned char *_tenc_find_task_key(unsigned char key_id[MD5_LENGTH]) {
 		printk("\n");
 		if (memcmp(key->key_id, key_id, MD5_LENGTH) == 0) {
 			spin_unlock_irqrestore(&current->enc_keys_lock, flags);
-			return key->key_bytes;
+			return key;
 		}
 	}
 	spin_unlock_irqrestore(&current->enc_keys_lock, flags);
@@ -194,11 +234,13 @@ static void _tenc_aes128_ctr_page(struct inode *inode ,struct page *page) {
 	struct dentry *dentry = d_find_any_alias(inode);
     int i, pos, j;
     unsigned char key_id[MD5_LENGTH];
-	unsigned char *enc_key;
+	unsigned char key_bytes[KEY_LENGTH];
 	struct crypto_cipher *cipher;
     char iv[AES_BLOCK_SIZE], enc_block[AES_BLOCK_SIZE];
     union counter_bytes cb;
     char *addr;
+	unsigned long flags;
+	struct inode_key *ikey;
 
 
 	if (!dentry) {
@@ -225,11 +267,16 @@ static void _tenc_aes128_ctr_page(struct inode *inode ,struct page *page) {
 
 	dput(dentry);
 
-	enc_key = _tenc_find_task_key(key_id);
+	spin_lock_irqsave(&inode_keys_lock, flags);
+	ikey = _tenc_find_inode_key(inode);
+	if (ikey) {
+		memcpy(key_bytes, ikey->key_bytes, KEY_LENGTH);
+	}
+	spin_unlock_irqrestore(&inode_keys_lock, flags);
 
-	if (!enc_key) {
+	if (!ikey) {
 		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
-				"Process did not have the enc_key\n");
+				"Inode did not have the enc_key\n");
 		return;
 	}
 
@@ -241,7 +288,7 @@ static void _tenc_aes128_ctr_page(struct inode *inode ,struct page *page) {
 		return;
 	}
 
-	if (crypto_cipher_setkey(cipher, enc_key, KEY_LENGTH)) {
+	if (crypto_cipher_setkey(cipher, key_bytes, KEY_LENGTH)) {
 		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
 				"Failed to set key crypto_cipher_setkey. err=%ld\n",
 				PTR_ERR(cipher));
@@ -380,48 +427,99 @@ int tenc_can_open(struct inode *inode, struct file *filp) {
 	char user_key_id[MD5_LENGTH];
 	int atr_len = generic_getxattr(filp->f_dentry, KEY_ID_XATTR,
 			user_key_id, MD5_LENGTH);
+	struct inode_key *ikey;
+	unsigned long flags;
 
-    if (atr_len <= 0) {
+	spin_lock_irqsave(&inode_keys_lock, flags);
+	ikey = _tenc_find_inode_key(inode);
+
+    if (atr_len <= 0 && ikey) {
+		printk(KERN_INFO "Inode has no key_id xattr but has an attached key."
+				"Detaching the key.\n");
+		_tenc_del_inode_key(ikey);
+    	spin_unlock_irqrestore(&inode_keys_lock, flags);
     	return 1;
     }
 
-    // TODO: This is not secure. See comment below.
-    if (atr_len == MD5_LENGTH) {
-    	if(_tenc_find_task_key(user_key_id)) {
-    		printk(KERN_INFO "Key found. Allowing to open the file.\n");
-    		return 1;
-    	}
+    if (atr_len <= 0) {
+    	spin_unlock_irqrestore(&inode_keys_lock, flags);
+    	return 1;
     }
 
+    if (atr_len == MD5_LENGTH) {
+    	struct task_enc_key *enc_key = _tenc_find_task_key(user_key_id);
+    	if (enc_key && ikey) {
+    		if (memcmp(enc_key->key_bytes, ikey->key_bytes, KEY_LENGTH) == 0) {
+        		printk(KERN_INFO "Key found. Was already attached. "
+        				"Allowing to open the file.\n");
+            	spin_unlock_irqrestore(&inode_keys_lock, flags);
+        		return 1;
+    		}
+    		else {
+    			BUG(); // Likely a bug or security violation.
+    		}
+    	}
+    	else if (!enc_key && ikey) {
+    		// You do not have the key. Access denied.
+        	spin_unlock_irqrestore(&inode_keys_lock, flags);
+    		return 0;
+    	}
+    	else if (enc_key && !ikey) {
+    		printk(KERN_INFO "Inode has no enc_key, but process has it. "
+    				"Attaching key to inode.\n");
+    		if (!_tenc_add_inode_key(inode, enc_key)) {
+    			printk(KERN_WARNING "Not enough memory to open encrypted "
+    					"file.\n");
+    			spin_unlock_irqrestore(&inode_keys_lock, flags);
+    			return 0; // No memory... The error is not very verbose.
+    		}
+        	spin_unlock_irqrestore(&inode_keys_lock, flags);
+        	return 1;
+    	}
+    	else {
+    		printk(KERN_INFO "Process did not have the key to open file.\n");
+        	spin_unlock_irqrestore(&inode_keys_lock, flags);
+        	return 0;
+    	}
+    }
+	spin_unlock_irqrestore(&inode_keys_lock, flags);
 	return 0;
+}
+EXPORT_SYMBOL(tenc_can_open);
+
+void tenc_release(struct inode *inode, struct file *filp) {
+	unsigned long flags;
+	struct inode_key *ikey;
+	spin_lock_irqsave(&inode_keys_lock, flags);
+	ikey = _tenc_find_inode_key(inode);
+	if (ikey) {
+		_tenc_del_inode_key(ikey);
+	}
+	spin_unlock_irqrestore(&inode_keys_lock, flags);
 }
 EXPORT_SYMBOL(tenc_can_open);
 
 long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	struct inode *inode;
-	unsigned long iflags;
+	unsigned long iflags, flags;
     // TODO: No point making it really random.
 	// This destroys security but changing it will make testing more difficult.
 	// I'm leaving it as is for my final submit.
 	char enc_iv[] = "1234567890123456"; // Lenght is AES_BLOCK_SIZE
 	int err;
 
-	/* TODO: To make this really secure, we would need to ensure that malicious
-	 * process can't do the following sequence:
-	 *
-	 *  - remove xattrs after the encrypting process calls open
-	 *  - open the file itself
-	 *  - mmap it
-	 *  - reattach the xattrs so that the future decryption of pages succeeds
-	 *
-	 * We would need to use system rather then user xattr prefix. I will more
+	/* TODO: To make this really secure, we probably need some more locks and
+	 * we would need to use system rather then user xattr prefix. I will more
 	 * or less ignore these security issues though. There is no way I can get it
 	 * right without community input and security done almost-right is
 	 * worth nothing anyway.
 	 */
 
+	spin_lock_irqsave(&inode_keys_lock, flags);
+
 	if (0 < generic_getxattr(filp->f_dentry, KEY_ID_XATTR, NULL, 0)) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: File is already encrypted\n");
+		spin_unlock_irqrestore(&inode_keys_lock, flags);
 		return -EEXIST;
 	}
 
@@ -429,6 +527,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	if (err) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file generic_setxattr "
 				"returned %d\n", err);
+		spin_unlock_irqrestore(&inode_keys_lock, flags);
 		return err;
 	}
 
@@ -436,6 +535,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	if (err) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file generic_setxattr "
 				"returned %d\n", err);
+		spin_unlock_irqrestore(&inode_keys_lock, flags);
 		return err;
 	}
 
@@ -450,6 +550,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
 		generic_removexattr(filp->f_dentry, IV_XATTR);
+		spin_unlock_irqrestore(&inode_keys_lock, flags);
 		return -EACCES;
 	}
 
@@ -459,9 +560,11 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
 		generic_removexattr(filp->f_dentry, IV_XATTR);
+		spin_unlock_irqrestore(&inode_keys_lock, flags);
 		return -EACCES;
 	}
 
+	spin_unlock_irqrestore(&inode_keys_lock, flags);
 	spin_unlock_irqrestore(&inode->i_lock, iflags);
 	return 0;
 }
