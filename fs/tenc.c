@@ -297,7 +297,7 @@ static void _tenc_aes128_ctr_page(struct inode *inode, struct page *page) {
 		iv[j] ^= cb.bytes[j];
 	}
 
-	printk("de/encrypting block %d with iv: ");
+	printk("de/encrypting block %d with iv: ", _tenc_page_pos_to_blknr(page, inode, 0));
 	printk_key_id(iv);
 	printk("\n");
 
