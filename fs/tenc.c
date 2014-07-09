@@ -17,12 +17,18 @@
 #include <linux/crypto.h>
 #include <linux/spinlock.h>
 #include <linux/scatterlist.h>
+#include <crypto/aes.h>
 #include <asm/current.h>
 
 #define KEY_ID_XATTR "user.enc_key_id"
 #define MD5_LENGTH 16
 #define IV_XATTR "user.enc_iv"
-#define IV_LENGTH 16
+#define KEY_LENGTH 16
+
+union counter_bytes {
+	unsigned long counter;
+	char bytes[AES_BLOCK_SIZE];
+};
 
 /* Note that the key search and adding are not synchronized. This is
  * intentional. User application shoud
@@ -86,26 +92,24 @@ struct page_decrypt_work {
 	struct page *page;
 };
 
-static int _tenc_should_encrypt(struct inode *inode) {
+static int _tenc_encrypted_file(struct inode *inode) {
 	struct dentry *dentry = d_find_any_alias(inode);
-	int res;
+    int atr_le;
+
 	if (!dentry) {
 		// printk(KERN_WARNING
-		// 	 	  "_tenc_should_encrypt did not found an dentry for inode.\n");
+		// 	 	  "_tenc_encrypted_file did not found an dentry for inode.\n");
 		return 0;
 	}
 
-	// mpage_end_io + 0x6b
-	// printk_ratelimited(KERN_WARNING "generic_getxattr returned = %d\n",
-	//                    generic_getxattr(dentry, "user.encrypt", NULL, 0));
-	res = 0 < generic_getxattr(dentry, "user.encrypt", NULL, 0);
+	int atr_len = generic_getxattr(dentry, KEY_ID_XATTR, NULL, 0);
+
 	dput(dentry);
-	return res;
+	return atr_len == MD5_LENGTH;
 }
 
 /* Does not grant ownership of the pointer. */
-static unsigned char *_tenc_find_task_key(struct inode *inode,
-		unsigned char key_id[MD5_LENGTH]) {
+static unsigned char *_tenc_find_task_key(unsigned char key_id[MD5_LENGTH]) {
 	struct list_head *pos;
 	unsigned long flags;
 	struct task_enc_key *key;
@@ -168,13 +172,102 @@ static sector_t _tenc_page_pos_to_blknr(struct page *page, struct inode *inode,
  */
 int tenc_write_needs_page_switch(struct buffer_head *bh) {
 	struct inode *inode = _tenc_safe_bh_to_inode(bh);
-
-	if (inode && _tenc_should_encrypt(inode)) {
+	if (inode && _tenc_encrypted_file(inode)) {
 		return 1;
 	}
 	return 0;
 }
 EXPORT_SYMBOL(tenc_write_needs_page_switch);
+
+void _tenc_aes128_ctr_page(struct inode *inode ,struct page *page) {
+	struct dentry *dentry = d_find_any_alias(inode);
+    int i, pos, j;
+    unsigned char key_id[MD5_LENGTH];
+	unsigned char *enc_key;
+	struct crypto_cipher *cipher;
+    char iv[AES_BLOCK_SIZE], enc_block[AES_BLOCK_SIZE];
+    union counter_bytes cb;
+    char *addr;
+
+
+	if (!dentry) {
+		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
+				"No file dentry\n");
+		return;
+	}
+
+	if (MD5_LENGTH != generic_getxattr(dentry, KEY_ID_XATTR, key_id,
+			MD5_LENGTH)) {
+		dput(dentry);
+		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
+				"No key_id xattr\n");
+		return;
+	}
+
+	if (AES_BLOCK_SIZE != generic_getxattr(dentry, IV_XATTR, iv,
+			AES_BLOCK_SIZE)) {
+		dput(dentry);
+		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
+				"No IV xattr\n");
+		return;
+	}
+
+	dput(dentry);
+
+	enc_key = _tenc_find_task_key(key_id);
+
+	if (!enc_key) {
+		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
+				"Process did not have the enc_key\n");
+		return;
+	}
+
+	cipher = crypto_alloc_cipher("aes", 0, 0);
+
+	if (IS_ERR(cipher)) {
+		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
+				"Could not allocate cipher. err=%d\n", PTR_ERR(cipher));
+		return;
+	}
+
+	if (crypto_cipher_setkey(cipher, enc_key, KEY_LENGTH)) {
+		printk(KERN_ERR "_tenc_aes128_ctr_page encryption failure. "
+				"Failed to set key crypto_cipher_setkey. err=%d\n",
+				PTR_ERR(cipher));
+		crypto_free_cipher(cipher);
+		return;
+	}
+
+	// Create the (IV_pliku ^ (indeks_bloku * rozmiar_bloku)) Nonce
+	// This system does not break if the last file block isn't actually full.
+	memset(cb.bytes, 0, sizeof(union counter_bytes));
+	cb.counter = page->index * PAGE_SIZE;
+	for (j = 0; j < AES_BLOCK_SIZE; j++) {
+		iv[j] ^= cb.bytes[j];
+	}
+
+	addr = kmap(page);
+
+	for (i = 0, pos = 0; i < PAGE_SIZE / AES_BLOCK_SIZE;
+			i++, pos += AES_BLOCK_SIZE) {
+		memset(cb.bytes, 0, sizeof(union counter_bytes));
+		cb.counter = i;
+		memcpy(enc_block, iv, AES_BLOCK_SIZE);
+
+		for (j = 0; j < AES_BLOCK_SIZE; j++) {
+			enc_block[j] ^= cb.bytes[j];
+		}
+
+		crypto_cipher_encrypt_one(cipher, enc_block, enc_block);
+
+		for (j = 0; j < AES_BLOCK_SIZE; j++) {
+			addr[pos + j] ^= enc_block[j];
+		}
+	}
+
+	kunmap(page);
+	crypto_free_cipher(cipher);
+}
 
 /*
  * Encrypts the given buffer_head, but uses the dst_page as the destination
@@ -185,7 +278,7 @@ void tenc_encrypt_block(struct buffer_head *bh, struct page *dst_page) {
 	struct inode *inode = _tenc_safe_bh_to_inode(bh);
 	struct page *src_page = bh->b_page;
 
-	if (inode && _tenc_should_encrypt(inode)) {
+	if (inode && _tenc_encrypted_file(inode)) {
 		int pos;
 		char *dst_addr = kmap(dst_page);
 		char *src_addr = kmap(src_page);
@@ -233,7 +326,7 @@ static void _tenc_decrypt_page_worker(struct work_struct *_work) {
 int tenc_decrypt_page(struct page *page) {
 	struct inode *inode = page->mapping->host;
 
-	if (_tenc_should_encrypt(inode)) {
+	if (_tenc_encrypted_file(inode)) {
 		struct page_decrypt_work *work;
 		work = kmalloc(sizeof(struct page_decrypt_work), GFP_ATOMIC);
 		if (work) {
@@ -264,7 +357,7 @@ EXPORT_SYMBOL(tenc_decrypt_page);
 void tenc_decrypt_buffer_head(struct buffer_head *bh) {
 	struct inode *inode = _tenc_safe_bh_to_inode(bh);
 
-	if (inode && _tenc_should_encrypt(inode)) {
+	if (inode && _tenc_encrypted_file(inode)) {
 		/* Unimplemented.
 		 *
 		 * This is not necessary on machines where disk block size == PAGE_SIZE.
@@ -287,8 +380,9 @@ int tenc_can_open(struct inode *inode, struct file *filp) {
     	return 1;
     }
 
+    // TODO: This is not secure. See comment below.
     if (atr_len == MD5_LENGTH) {
-    	if(_tenc_find_task_key(inode, user_key_id)) {
+    	if(_tenc_find_task_key(user_key_id)) {
     		printk(KERN_INFO "Key found. Allowing to open the file.\n");
     	}
 
@@ -302,9 +396,10 @@ EXPORT_SYMBOL(tenc_can_open);
 long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	struct inode *inode;
 	unsigned long iflags;
-    // TODO: No point making it really random. Will make testing more difficult.
+    // TODO: No point making it really random.
+	// This destroys security but changing it will make testing more difficult.
 	// I'm leaving it as is for my final submit.
-	char enc_iv[] = "1234567890123456";
+	char enc_iv[] = "1234567890123456"; // Lenght is AES_BLOCK_SIZE
 	int err;
 
 	/* TODO: To make this really secure, we would need to ensure that malicious
@@ -333,7 +428,7 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		return err;
 	}
 
-	err = generic_setxattr(filp->f_dentry, IV_XATTR, enc_iv, IV_LENGTH, 0);
+	err = generic_setxattr(filp->f_dentry, IV_XATTR, enc_iv, AES_BLOCK_SIZE, 0);
 	if (err) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file generic_setxattr "
 				"returned %d\n", err);
