@@ -512,6 +512,8 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 	// I'm leaving it as is for my final submit.
 	char enc_iv[] = "1234567890123456"; // Lenght is AES_BLOCK_SIZE
 	int err;
+	struct task_enc_key *enc_key;
+	struct inode_key *ikey;
 
 	/* TODO: To make this really secure, we probably need some more locks and
 	 * we would need to use system rather then user xattr prefix. I will more
@@ -527,6 +529,25 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: File is already encrypted\n");
 		spin_unlock_irqrestore(&inode_keys_lock, flags);
 		return -EEXIST;
+	}
+
+	enc_key = _tenc_find_task_key(key_id);
+	if (!enc_key) {
+		printk(KERN_INFO "tenc_encrypt_ioctl: Caller does not have the "
+				"requested key\n", err);
+		spin_unlock_irqrestore(&inode_keys_lock, flags);
+		return -EPERM;
+	}
+	else {
+		ikey = _tenc_find_inode_key(inode);
+		if (!ikey) {
+    		if (!_tenc_add_inode_key(inode, enc_key)) {
+    			printk(KERN_WARNING "Not enough memory to open encrypted "
+    					"file.\n");
+    			spin_unlock_irqrestore(&inode_keys_lock, flags);
+    			return -ENOMEM;
+    		}
+		}
 	}
 
 	err = generic_setxattr(filp->f_dentry, KEY_ID_XATTR, key_id, MD5_LENGTH, 0);
@@ -557,17 +578,17 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
 		generic_removexattr(filp->f_dentry, IV_XATTR);
 		spin_unlock_irqrestore(&inode_keys_lock, flags);
-		return -EACCES;
+		return -EINVAL;
 	}
 
-	if (inode->i_bytes > 0) {
+	if (inode->i_bytes > 0 || inode->i_blocks > 0) {
 		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file access denied - "
 				"file not empty\n");
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		generic_removexattr(filp->f_dentry, KEY_ID_XATTR);
 		generic_removexattr(filp->f_dentry, IV_XATTR);
 		spin_unlock_irqrestore(&inode_keys_lock, flags);
-		return -EACCES;
+		return -EINVAL;
 	}
 
 	spin_unlock_irqrestore(&inode_keys_lock, flags);
