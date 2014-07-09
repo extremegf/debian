@@ -1783,39 +1783,6 @@ out:
 	return ret;
 }
 
-void mess_with_page(struct page *page) {
-	int i;
-	if (!page) {
-		printk(KERN_INFO "One NULL page\n");
-	}
-	else {
-		char buf[31];
-		void *pg_addr = page_address(page);
-		char *pg_arr = (char*)pg_addr;
-
-		if (pg_addr == NULL) {
-			printk(KERN_INFO "pg_addr == NULL !!!\n");
-			return;
-		}
-
-		lock_page(page);
-		for (i = 0; i < 30; i++) {
-			char c = pg_arr[i];
-			if ('a' <= c && c <= 'z') {
-				buf[i] = c;
-			}
-			else {
-				buf[i] = '#';
-			}
-			buf[30] = 0;
-		}
-		printk(KERN_INFO "Page contents (excaped): %s\n", buf);
-
-		unlock_page(page);
-	}
-
-}
-
 /*
  * Note that we don't need to start a transaction unless we're journaling data
  * because we should have holes filled from ext4_page_mkwrite(). We even don't
@@ -1868,9 +1835,6 @@ static int ext4_writepage(struct page *page,
 	struct ext4_io_submit io_submit;
 
 	SHOW_BUILD_VERSION
-	if (0 < ext4_xattr_get(inode, 1, "mess_with_pages", NULL, 0))
-		mess_with_page(page);
-
 	trace_ext4_writepage(page);
 	size = i_size_read(inode);
 	if (page->index == size >> PAGE_CACHE_SHIFT)
@@ -2427,31 +2391,6 @@ static int __writepage(struct page *page, struct writeback_control *wbc,
 	return ret;
 }
 
-void mess_with_pages(struct address_space *mapping)
-{
-	struct pagevec pvec;
-	pgoff_t first;
-	int loop, nr_pages;
-
-	pagevec_init(&pvec, 0);
-	first = 0;
-
-	for (;;) {
-		/* grab a bunch of pages to clean */
-		nr_pages = pagevec_lookup(&pvec, mapping, first, PAGEVEC_SIZE - pagevec_count(&pvec));
-		if (!nr_pages)
-			break;
-
-		for (loop = 0; loop < nr_pages; loop++)
-			mess_with_page(pvec.pages[loop]);
-
-		first = pvec.pages[nr_pages - 1]->index + 1;
-
-		pvec.nr = nr_pages;
-		pagevec_release(&pvec);
-	}
-}
-
 static int ext4_writepages(struct address_space *mapping,
 			   struct writeback_control *wbc)
 {
@@ -2469,10 +2408,6 @@ static int ext4_writepages(struct address_space *mapping,
 	bool give_up_on_write = false;
 
 	SHOW_BUILD_VERSION
-
-	if (0 < ext4_xattr_get(inode, 1, "mess_with_pages", NULL, 0))
-		mess_with_pages(mapping);
-
 	trace_ext4_writepages(inode, wbc);
 
 	/*
@@ -2993,13 +2928,11 @@ static int ext4_readpage(struct file *file, struct page *page)
 
 	trace_ext4_readpage(page);
 
-	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
-		printk(KERN_INFO "ext4_readpage with show_in_log\n");
+	if (ext4_has_inline_data(inode))
+		ret = ext4_readpage_inline(inode, page);
 
 	SHOW_BUILD_VERSION
 
-	if (ext4_has_inline_data(inode))
-		ret = ext4_readpage_inline(inode, page);
 
 	if (ret == -EAGAIN)
 		return mpage_readpage(page, ext4_get_block);
@@ -3012,9 +2945,6 @@ ext4_readpages(struct file *file, struct address_space *mapping,
 		struct list_head *pages, unsigned nr_pages)
 {
 	struct inode *inode = mapping->host;
-
-	if (0 < ext4_xattr_get(inode, 1, "show_in_log", NULL, 0))
-		printk(KERN_INFO "ext4_readpage with show_in_log\n");
 
 	SHOW_BUILD_VERSION
 
