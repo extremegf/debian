@@ -570,9 +570,6 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 		return -EACCES;
 	}
 
-	/* We do not support encryption of inode inline data */
-	ext4_clear_inode_state(inode, EXT4_STATE_MAY_INLINE_DATA);
-
 	spin_unlock_irqrestore(&inode_keys_lock, flags);
 	spin_unlock_irqrestore(&inode->i_lock, iflags);
 	return 0;
