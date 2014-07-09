@@ -223,6 +223,8 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	ext4_debug("cmd = %u, arg = %lu\n", cmd, arg);
 
+	kprint("ext4_ioctl: %u %ul%\n", cmd, arg);
+
 	switch (cmd) {
 	case EXT4_IOC_GETFLAGS:
 		ext4_get_inode_flags(ei);
