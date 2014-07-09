@@ -561,6 +561,9 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 
 	/* This ensures that file can't be opened by anyone else when encryption
 	 * if requested. This is more to avoid API misuse than for security. */
+	printk("inode i_count=%d i_dio_count=%d i_writecount=%d\n",
+			atomic_read(&inode->i_count), atomic_read(&inode->i_dio_count),
+						atomic_read(&inode->i_writecount));
 	if (atomic_read(&inode->i_count) +
 			atomic_read(&inode->i_dio_count) +
 			atomic_read(&inode->i_writecount) > 1) {
