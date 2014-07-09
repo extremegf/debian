@@ -355,7 +355,7 @@ void tenc_decrypt_buffer_head(struct buffer_head *bh) {
 		 * This is not necessary on machines where disk block size == PAGE_SIZE.
 		 * The virtual machine we use has this property.
 		 */
-		BUG();
+		printk(KERN_ERR "tenc_decrypt_buffer_head: should decrypt but is not implemented");
 	}
 }
 EXPORT_SYMBOL(tenc_decrypt_buffer_head);
