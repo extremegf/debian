@@ -561,14 +561,12 @@ long tenc_encrypt_ioctl(struct file *filp, unsigned char key_id[MD5_LENGTH]) {
 
 	/* This ensures that file can't be opened by anyone else when encryption
 	 * if requested. This is more to avoid API misuse than for security. */
-	printk("inode i_count=%d i_dio_count=%d i_writecount=%d\n",
-			atomic_read(&inode->i_count), atomic_read(&inode->i_dio_count),
-						atomic_read(&inode->i_writecount));
-	if (atomic_read(&inode->i_count) +
-			atomic_read(&inode->i_dio_count) +
-			atomic_read(&inode->i_writecount) > 1) {
+	if (atomic_read(&inode->i_count) > 1) {
+		// TODO: This is likely a security hole. We should properly filter
+		// if anyone else has already opened the file for reading before
+		// ioctl was called.
 		printk(KERN_INFO "tenc_encrypt_ioctl: Encrypted file access denied - "
-				"file opened more than once.\n");
+				"file has more than one reader.\n");
 		spin_unlock_irqrestore(&inode->i_lock, iflags);
 		_tenc_del_inode_key(ikey);
 		spin_unlock_irqrestore(&inode_keys_lock, flags);
