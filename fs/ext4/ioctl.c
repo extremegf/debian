@@ -223,8 +223,6 @@ long ext4_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	ext4_debug("cmd = %u, arg = %lu\n", cmd, arg);
 
-	printk("ext4_ioctl: %u %ul%\n", cmd, arg);
-
 	switch (cmd) {
 	case EXT4_IOC_GETFLAGS:
 		ext4_get_inode_flags(ei);
@@ -633,8 +631,7 @@ resizefs_out:
 	{
 		struct ext4_ioctl_encrypt __user *user_encrypt = (void*)arg;
 		struct ext4_ioctl_encrypt encrypt;
-		printk("got a ioctl EXT4_ENCRYPT\n");
-		if (!copy_from_user(&encrypt, user_encrypt,
+		if (copy_from_user(&encrypt, user_encrypt,
 				sizeof(struct ext4_ioctl_encrypt))) {
 			return -EFAULT;
 		}
