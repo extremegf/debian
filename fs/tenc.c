@@ -144,7 +144,7 @@ static int _tenc_encrypted_file(struct inode *inode) {
 static void printk_key_id(char *key_id) {
 	int i;
 	for (i=0; i<16; i++) {
-		printk("%20x", (int)key_id[i]);
+		printk("%02x", (int)key_id[i]);
 	}
 }
 
@@ -223,7 +223,7 @@ int tenc_write_needs_page_switch(struct buffer_head *bh) {
 }
 EXPORT_SYMBOL(tenc_write_needs_page_switch);
 
-static void _tenc_aes128_ctr_page(struct inode *inode ,struct page *page) {
+static void _tenc_aes128_ctr_page(struct inode *inode, struct page *page) {
 	struct dentry *dentry = d_find_any_alias(inode);
     int i, pos, j;
     unsigned char key_id[MD5_LENGTH];
@@ -292,10 +292,14 @@ static void _tenc_aes128_ctr_page(struct inode *inode ,struct page *page) {
 	// Create the (IV_pliku ^ (indeks_bloku * rozmiar_bloku)) Nonce
 	// This system does not break if the last file block isn't actually full.
 	memset(cb.bytes, 0, sizeof(union counter_bytes));
-	cb.counter = page->index * PAGE_SIZE;
+	cb.counter = _tenc_page_pos_to_blknr(page, inode, 0) * PAGE_SIZE;
 	for (j = 0; j < AES_BLOCK_SIZE; j++) {
 		iv[j] ^= cb.bytes[j];
 	}
+
+	printk("de/encrypting block %d with iv: ");
+	printk_key_id(iv);
+	printk("\n");
 
 	addr = kmap(page);
 
