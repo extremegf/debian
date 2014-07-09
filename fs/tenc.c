@@ -108,6 +108,13 @@ static int _tenc_encrypted_file(struct inode *inode) {
 	return atr_len == MD5_LENGTH;
 }
 
+static void printk_key_id(char *key_id) {
+	int i;
+	for (i=0; i<16; i++) {
+		printk("%x", key_id[i]);
+	}
+}
+
 /* Does not grant ownership of the pointer. */
 static unsigned char *_tenc_find_task_key(unsigned char key_id[MD5_LENGTH]) {
 	struct list_head *pos;
@@ -119,6 +126,10 @@ static unsigned char *_tenc_find_task_key(unsigned char key_id[MD5_LENGTH]) {
 	spin_lock_irqsave(&current->enc_keys_lock, flags);
 	list_for_each(pos, &current->enc_keys) {
 		key = list_entry(pos, struct task_enc_key, other_keys);
+		printk_key_id(key->key_id);
+		printk(" vs ");
+		printk_key_id(key_id);
+		printk("\n");
 		if (memcmp(key->key_id, key_id, MD5_LENGTH) == 0) {
 			spin_unlock_irqrestore(&current->enc_keys_lock, flags);
 			return key->key_bytes;
@@ -179,7 +190,7 @@ int tenc_write_needs_page_switch(struct buffer_head *bh) {
 }
 EXPORT_SYMBOL(tenc_write_needs_page_switch);
 
-void _tenc_aes128_ctr_page(struct inode *inode ,struct page *page) {
+static void _tenc_aes128_ctr_page(struct inode *inode ,struct page *page) {
 	struct dentry *dentry = d_find_any_alias(inode);
     int i, pos, j;
     unsigned char key_id[MD5_LENGTH];
@@ -355,7 +366,8 @@ void tenc_decrypt_buffer_head(struct buffer_head *bh) {
 		 * This is not necessary on machines where disk block size == PAGE_SIZE.
 		 * The virtual machine we use has this property.
 		 */
-		printk(KERN_ERR "tenc_decrypt_buffer_head: should decrypt but is not implemented");
+		printk(KERN_ERR "tenc_decrypt_buffer_head: decryption of "
+				"partial page requested\n");
 		BUG();
 	}
 }
