@@ -31,3 +31,4 @@ lib/lib.a
 scripts/mod/devicetable-offsets.s
 usr/.initramfs_data.cpio.d
 vmlinux
+Debug
