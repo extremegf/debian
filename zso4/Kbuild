@@ -1,2 +1,2 @@
-tr-obj := transdb.o transaction.o
-obj-m   := tr.o
+transdb-obj := transaction.o
+obj-m := transdb.o
