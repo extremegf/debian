@@ -1,1 +1,1 @@
-obj-m := drv_yatb.o
+obj-m := transdb.o transaction.o
