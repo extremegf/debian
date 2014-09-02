@@ -14,76 +14,80 @@
 #include <linux/module.h>
 
 static ssize_t hello_read(struct file * file, char * buf,
-		size_t count, loff_t *ppos)
+                          size_t count, loff_t *ppos)
 {
-	char *hello_str = "Hello, world!\n";
-	int len = strlen(hello_str); /* Don't include the null byte. */
-	/*
-	 * We only support reading the whole string at once.
-	 */
-	if (count < len)
-		return -EINVAL;
-	/*
-	 * If file position is non-zero, then assume the string has
-	 * been read and indicate there is no more data to be read.
-	 */
-	if (*ppos != 0)
-		return 0;
-	/*
-	 * Besides copying the string to the user provided buffer,
-	 * this function also checks that the user has permission to
-	 * write to the buffer, that it is mapped, etc.
-	 */
-	if (copy_to_user(buf, hello_str, len))
-		return -EINVAL;
-	/*
-	 * Tell the user how much data we wrote.
-	 */
-	*ppos = len;
+    char *hello_str = "Hello, world!\n";
+    int len = strlen(hello_str); /* Don't include the null byte. */
+    /*
+     * We only support reading the whole string at once.
+     */
+    if (count < len)
+        return -EINVAL;
+    /*
+     * If file position is non-zero, then assume the string has
+     * been read and indicate there is no more data to be read.
+     */
+    if (*ppos != 0)
+        return 0;
+    /*
+     * Besides copying the string to the user provided buffer,
+     * this function also checks that the user has permission to
+     * write to the buffer, that it is mapped, etc.
+     */
+    if (copy_to_user(buf, hello_str, len))
+        return -EINVAL;
+    /*
+     * Tell the user how much data we wrote.
+     */
+    *ppos = len;
 
-	return len;
+    return len;
 }
 
 static const struct file_operations db_fops = {
-		.owner                = THIS_MODULE,
-		.read                = hello_read,
+owner:
+    THIS_MODULE,
+read:
+    hello_read,
 };
+
 
 static struct miscdevice db_device = {
-		/*
-		 * We don't care what minor number we end up with, so tell the
-		 * kernel to just pick one.
-		 */
-		MISC_DYNAMIC_MINOR,
-		/*
-		 * Name ourselves /dev/db.
-		 */
-		"db",
-		/*
-		 * What functions to call when a program performs file
-		 * operations on the device.
-		 */
-		&db_fops
+    /*
+     * We don't care what minor number we end up with, so tell the
+     * kernel to just pick one.
+     */
+    MISC_DYNAMIC_MINOR,
+    /*
+     * Name ourselves /dev/db.
+     */
+    "db",
+    /*
+     * What functions to call when a program performs file
+     * operations on the device.
+     */
+    &db_fops
 };
 
-static int transdb_init_module(void) {
-	int ret;
+static int transdb_init_module(void)
+{
+    int ret;
 
-	/*
-	 * Create the "db" device in the /sys/class/misc directory.
-	 * Udev will automatically create the /dev/db device using
-	 * the default rules.
-	 */
-	ret = misc_register(&db_device);
-	if (ret)
-		printk(KERN_ERR
-				"Unable to register \"Hello, world!\" misc device\n");
+    /*
+     * Create the "db" device in the /sys/class/misc directory.
+     * Udev will automatically create the /dev/db device using
+     * the default rules.
+     */
+    ret = misc_register(&db_device);
+    if (ret)
+        printk(KERN_ERR "Unable to register \"Hello, world!\" misc device\n");
 
-	return ret;
+    return ret;
 }
 
-static void transdb_cleanup_module(void) {
-	misc_deregister(&db_device);
+static void transdb_cleanup_module(void)
+{
+    misc_deregister(&db_device);
 }
 
 module_init(transdb_init_module);
