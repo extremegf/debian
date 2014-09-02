@@ -10,7 +10,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h> /* KERN_WARNING */
 #include <linux/major.h>
-#include <linux/miscdevice.h><
+#include <linux/miscdevice.h>
 #include <linux/module.h>
 
 static ssize_t hello_read(struct file * file, char * buf,
