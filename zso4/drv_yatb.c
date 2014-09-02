@@ -1,8 +1,8 @@
 /* Emacs linux kernel C mode:-*- linux-c -*-*/
 /* 
- * Sterownik wypisujący "You are the best!"
+ * Sterownik wypisuj��cy "You are the best!"
  *
- * Przed użyciem należy utworzyć pliki specjalne.
+ * Przed u��yciem nale��y utworzy�� pliki specjalne.
  *
  * Do odczytu wielokrotnego:
  * mknod /dev/yatb c 42 0  
@@ -28,12 +28,12 @@ MODULE_LICENSE("GPL");
 static const char yatb_reply[] = "You are the best!\n";
 static long repeat=1;
 
-/* Na stałe wybrany numer główny - oficjalny numer próbny */
+/* Na sta��e wybrany numer g����wny - oficjalny numer pr��bny */
 static int major = 42;
 
 /*
- * Odczyt (z punktu widzenia aplikacji wołającej) to przepisanie danych z
- * przestrzeni adresowej jądra do przestrzeni adresowej użytkownika.
+ * Odczyt (z punktu widzenia aplikacji wo��aj��cej) to przepisanie danych z
+ * przestrzeni adresowej j��dra do przestrzeni adresowej u��ytkownika.
  * Wersja jednokrotnego wypisania.
  */
 static ssize_t yatb_once_read(struct file *file, char __user *buf, size_t count, loff_t *filepos)
@@ -46,11 +46,11 @@ static ssize_t yatb_once_read(struct file *file, char __user *buf, size_t count,
 	if (my_pos >= my_max || my_pos < 0)
 		return 0; 
 
-	/* ustalamy, ile tak naprawdę możemy skopiować */
+	/* ustalamy, ile tak naprawd�� mo��emy skopiowa�� */
 	if (count > my_max-my_pos)
 		count = my_max-my_pos;
 
-	/* kopiujemy do przestrzeni użytkownika */
+	/* kopiujemy do przestrzeni u��ytkownika */
 	not_copied = copy_to_user(buf,yatb_reply+my_pos,count);
 
 	if (not_copied != 0)
@@ -58,22 +58,22 @@ static ssize_t yatb_once_read(struct file *file, char __user *buf, size_t count,
 		return -EFAULT;
 	}
 
-	/* copy_to_user zwraca liczbę NIE skopiowanych bajtów */
+	/* copy_to_user zwraca liczb�� NIE skopiowanych bajt��w */
 	my_pos += count;
 
 	/* Uaktualnienie pozycji w pliku */
 	*filepos = (loff_t)my_pos;
 
-	/* Liczba przepisanych bajtów */
+	/* Liczba przepisanych bajt��w */
 	return count;
 }
 
 /*
- * Odczyt (z punktu widzenia aplikacji wołającej) to przepisanie danych z
- * przestrzeni adresowej jądra do przestrzeni adresowej użytkownika.
- * Wersja z możliwością wielokrotnego powtórzenia napisu.
+ * Odczyt (z punktu widzenia aplikacji wo��aj��cej) to przepisanie danych z
+ * przestrzeni adresowej j��dra do przestrzeni adresowej u��ytkownika.
+ * Wersja z mo��liwo��ci�� wielokrotnego powt��rzenia napisu.
  *
- * Liczbę powtorzeń przechowujemy w danych prywatnych otwartego pliku.
+ * Liczb�� powtorze�� przechowujemy w danych prywatnych otwartego pliku.
  */
 static ssize_t yatb_read(struct file *file,char __user *buf, size_t count, loff_t *filepos)
 {
@@ -95,11 +95,11 @@ static ssize_t yatb_read(struct file *file,char __user *buf, size_t count, loff_
 	else
 		my_num = my_avail;
 
-	/* ustalamy, gdzie skończyć odczyt */
+	/* ustalamy, gdzie sko��czy�� odczyt */
 	my_end = my_pos + my_num;
 	
 	/* 
-	 * Tu zastosowano przepisanie bajt po bajcie, ale lepiej uzywać copy_to_user 
+	 * Tu zastosowano przepisanie bajt po bajcie, ale lepiej uzywa�� copy_to_user 
 	 * (por. yatb_once_read)
 	 */
 	for (; my_pos < my_end; my_pos++) 
@@ -109,16 +109,16 @@ static ssize_t yatb_read(struct file *file,char __user *buf, size_t count, loff_
 	/* Waktualnienie pozycji w pliku */
 	*filepos = my_pos;
 
-	/* Liczba przepisanych bajtów */
+	/* Liczba przepisanych bajt��w */
 	return my_num;
 }
 
 /*
- * Zapis (z punktu widzenia aplikacji wołającej) ma służyć ustaleniu
- * liczby powtórzeń napisu przy odczycie (maksymalna pozycja w pliku osiągnięta
- * przy zapisie określa liczbę powtórzeń)
+ * Zapis (z punktu widzenia aplikacji wo��aj��cej) ma s��u��y�� ustaleniu
+ * liczby powt��rze�� napisu przy odczycie (maksymalna pozycja w pliku osi��gni��ta
+ * przy zapisie okre��la liczb�� powt��rze��)
  *
- * Liczbę powtórzeń przechowujemy jako daną prywatną otwartego pliku.
+ * Liczb�� powt��rze�� przechowujemy jako dan�� prywatn�� otwartego pliku.
  */
 static ssize_t yatb_write(struct file *file, const char __user *buf, size_t count, loff_t *filepos)
 {
@@ -127,19 +127,19 @@ static ssize_t yatb_write(struct file *file, const char __user *buf, size_t coun
 	long my_pos = *filepos + count;
 	long my_size = my_pos * my_max;
 
-	/* sprawdzenie, czy nowy rozmiar mie¶ci siê w zakresie long */
+	/* sprawdzenie, czy nowy rozmiar mie��ci si�� w zakresie long */
 	if (my_size / my_max != my_pos || my_size < 0 || my_pos < 0)
 		return -EINVAL;
 
 	/* Waktualnienie pozycji w pliku */
 	*filepos = my_pos;
 
-	/* Zapamietanie obecnej pozycji - liczby powtórzen */
+	/* Zapamietanie obecnej pozycji - liczby powt��rzen */
 	*priv = *filepos;
 
 	printk(KERN_WARNING "Repeat set to: %ld\n", *priv);
 
-	/* Liczba "przepisanych" bajtów */
+	/* Liczba "przepisanych" bajt��w */
 	return count;
 }
 
@@ -165,17 +165,18 @@ static struct file_operations yatb_fops = {
 };
 
 
-/* Wspólny open i release */
+/* Wsp��lny open i release */
 static int
 yatb_open(struct inode *ino, struct file *filep)
 {
-	/* Urządzenie o podnumerze 1 - odczyt jednokrotny */
+
+	/* Urz��dzenie o podnumerze 1 - odczyt jednokrotny */
 	if (MINOR(ino->i_rdev) == 1)
 			filep->f_op = &yatb_once_fops;
 	else
 	{
-		/* Dla urządzeń z wielokrotnym wypisaniem (podnumery =0 lub >1)
-		 * ustawienie domyślnej liczby powtórzeń na zmienną repeat (początkowo 1)
+		/* Dla urz��dze�� z wielokrotnym wypisaniem (podnumery =0 lub >1)
+		 * ustawienie domy��lnej liczby powt��rze�� na zmienn�� repeat (pocz��tkowo 1)
 		 */
 		filep->private_data = (void*)(&repeat);
 	}
@@ -185,8 +186,8 @@ yatb_open(struct inode *ino, struct file *filep)
 
 
 /*
- * Funkcja zamykająca - gdybyśmy w funkcji open np. alokowali pamięć prywatną
- * dla otwartego pliku, tu należałoby ją zwolnić.
+ * Funkcja zamykaj��ca - gdyby��my w funkcji open np. alokowali pami���� prywatn��
+ * dla otwartego pliku, tu nale��a��oby j�� zwolni��.
  */
 static int
 yatb_release(struct inode *ino, struct file *filep)
@@ -195,8 +196,8 @@ yatb_release(struct inode *ino, struct file *filep)
 }
 
 /*
- * Inicjalizacja modułu:
- * Rejestracja urządzenia znakowego.
+ * Inicjalizacja modu��u:
+ * Rejestracja urz��dzenia znakowego.
  */
 static int
 yatb_init_module(void)
@@ -213,7 +214,7 @@ yatb_init_module(void)
 	return 0;
 }
 /*
- * Wyrejestrowanie urządzenia znakowego.
+ * Wyrejestrowanie urz��dzenia znakowego.
  */
 static void
 yatb_cleanup_module(void)
