@@ -4,12 +4,14 @@
  * Author: Przemyslaw Horban <p.horban@mimuw.edu.pl>
  */
 
-#include <linux/module.h>
 #include <asm/uaccess.h>
 #include <linux/errno.h>
 #include <linux/fs.h>
-#include <linux/major.h>
+#include <linux/init.h>
 #include <linux/kernel.h> /* KERN_WARNING */
+#include <linux/major.h>
+#include <linux/miscdevice.h><
+#include <linux/module.h>
 
 static ssize_t hello_read(struct file * file, char * buf,
                           size_t count, loff_t *ppos)
