@@ -6,7 +6,7 @@
 
 #include <linux/list.h>
 #include <linux/radix-tree.h>
-#include <linux/semaphore.h>
+#include <linux/rwsem.h>
 
 
 #include "transaction.h"
