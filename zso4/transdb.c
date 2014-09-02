@@ -74,13 +74,12 @@ static int transdb_init_module(void) {
 	 * Udev will automatically create the /dev/db device using
 	 * the default rules.
 	 */
-	ret = misc_register(&db_dev);
+	ret = misc_register(&db_device);
 	if (ret)
 		printk(KERN_ERR
 				"Unable to register \"Hello, world!\" misc device\n");
 
 	return ret;
-	return 0;
 }
 
 static void transdb_cleanup_module(void) {
