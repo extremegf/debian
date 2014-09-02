@@ -83,7 +83,7 @@ static int transdb_init_module(void) {
 }
 
 static void transdb_cleanup_module(void) {
-	misc_deregister(&db_dev);
+	misc_deregister(&db_device);
 }
 
 module_init(transdb_init_module);
