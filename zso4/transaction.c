@@ -6,4 +6,3 @@
 
 #include "transaction.h"
 
-sldfk
