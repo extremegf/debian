@@ -48,7 +48,7 @@ struct db_seg null_seg;
 struct list_head all_db_vers;
 
 // Next version id.
-ver_t next_ver;
+ver_t next_ver---sdf;
 
 // Locks chain traversal, during compaction.
 struct rw_semaphore chain_rw_sem;
