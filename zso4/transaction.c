@@ -23,12 +23,6 @@ struct db_seg {
     char data[SEGMENT_SIZE];
 };
 
-struct trans_context_t {
-    ver_t ver_id;
-    struct list_head reads;
-    struct db_version ver;
-};
-
 //    INIT_RADIX_TREE(my_tree, gfp_mask);
 struct db_version {
     struct radix_tree_root segments;
@@ -37,6 +31,11 @@ struct db_version {
     char is_parent;  // Not kept fresh at all times!
 };
 
+struct trans_context_t {
+    ver_t ver_id;
+    struct list_head reads;
+    struct db_version ver;
+};
 
 // DB versions path end. RCU
 struct db_version *db_cur_ver;
