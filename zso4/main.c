@@ -87,9 +87,6 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
         buf += copy_len;
         *f_pos += copy_len;
         copied += copy_len;
-        show_int(count)
-        show_int(copy_len)
-        show_int(copied)
 
         seg_nr = *f_pos / SEGMENT_SIZE;
         ofs_in_seg = *f_pos % SEGMENT_SIZE;
