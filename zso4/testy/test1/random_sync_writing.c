@@ -30,6 +30,8 @@ int main() {
 		size_t pos, len;
 		char *data, *ref_data;
 
+		printf("test %d\n", test_nr);
+
 		do {
 		   pos = random() % TEST_AREA_LENGTH;
 		   len = random() % MAX_SPAN;
