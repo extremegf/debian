@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <iostream>
 
 const size_t TEST_AREA_LENGTH = 10;
 const size_t TEST_COUNT = 10;
