@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+
+const size_t TEST_AREA_LENGTH = 100000;
 
 #define CHECK(cond) \
 	if (!(cond)) { \
@@ -10,9 +13,16 @@
 int main() {
 	FILE *db, *ref;
 
-	CHECK(1 == 0);
-
 	db = fopen("/dev/db", "rw");
+	CHECK(db != NULL);
+
+	ref = fopen("ref.txt", "rw");
+	CHECK(ref != NULL);
+
+	// Clear out the ref file. Might be stale.
+	for (int i = 0; i < TEST_AREA_LENGTH; i++) {
+		fputc(0, ref);
+	}
 
 	return 0;
 }
