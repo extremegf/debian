@@ -466,12 +466,8 @@ struct trans_context_t *new_trans_context(void)
     struct trans_context_t *trans =
         kmalloc(sizeof(struct trans_context_t), GFP_KERNEL);
 
-    printk(KERN_INFO "pos 1 \n");
-
     if (!trans)
         return NULL;
-
-    printk(KERN_INFO "pos 2 \n");
 
     rcu_read_lock();
     trans->ver = new_db_version(rcu_dereference(db_cur_ver));
@@ -481,8 +477,6 @@ struct trans_context_t *new_trans_context(void)
         return NULL;
     }
 
-    printk(KERN_INFO "pos 3 \n");
-
     spin_lock_irqsave(&next_ver_lock, flags);
     trans->ver_id = next_ver;
     next_ver += 1;
@@ -490,6 +484,6 @@ struct trans_context_t *new_trans_context(void)
 
     INIT_LIST_HEAD(&trans->reads);
 
-    return 0;
+    return trans;
 }
 
