@@ -78,7 +78,6 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
         }
 
         if (not_copied) {
-            printk(KERN_INFO "not copied\n");
             return copied + (copy_len - not_copied);
         }
 
@@ -86,6 +85,8 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
         buf += copy_len;
         *f_pos += copy_len;
         copied += copy_len;
+
+        printk(KERN_INFO "copied %d bytes\n", copy_len);
 
         seg_nr = *f_pos / SEGMENT_SIZE;
         ofs_in_seg = *f_pos % SEGMENT_SIZE;
