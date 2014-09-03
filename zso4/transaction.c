@@ -128,9 +128,10 @@ void trans_destroy(void)
     }
 }
 
-void find_segment(struct db_version &ver, size_t seg_nr,
+void find_segment(struct db_version *ver, size_t seg_nr,
                   recursive_t recurse, struct db_seg* found_db_seg)
 {
+	//found_db_seg = radix_tree_lookup(&ver->segmen)
 
 
 }
