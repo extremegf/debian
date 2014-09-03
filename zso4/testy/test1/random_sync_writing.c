@@ -3,6 +3,8 @@
 #include <ctype.h>
 #include <iostream>
 
+using namespace std;
+
 const size_t TEST_AREA_LENGTH = 10;
 const size_t TEST_COUNT = 10;
 const size_t MAX_SPAN = 2;
