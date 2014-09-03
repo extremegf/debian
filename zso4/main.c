@@ -43,7 +43,8 @@ static struct trans_context_t *open_trans_if_needed(struct file *filp)
     return filp->private_data;
 }
 
-static ssize_t transdb_rw(rw_t rw, struct file *filp, char __user *buf,
+static ssize_t transdb_rw(rw_t rw, struct file *filp,
+                          char __user *buf, const char __user *const_buf,
                           size_t count, loff_t *f_pos)
 {
     size_t seg_nr = *f_pos / SEGMENT_SIZE;
@@ -66,7 +67,8 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp, char __user *buf,
             not_copied = copy_to_user(buf, seg_data + ofs_in_seg, copy_len);
         } else {
             seg_data = get_write_segment(trans, seg_nr);
-            not_copied = copy_from_user(seg_data + ofs_in_seg, buf, copy_len);
+            not_copied = copy_from_user(seg_data + ofs_in_seg, const_buf,
+                                        copy_len);
         }
 
         if (not_copied) {
@@ -90,14 +92,13 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp, char __user *buf,
 static ssize_t transdb_read(struct file *filp, char __user *buf, size_t count,
                             loff_t *f_pos)
 {
-    return transdb_rw(TDB_READ, filp, buf, count, f_pos);
+    return transdb_rw(TDB_READ, filp, buf, NULL, count, f_pos);
 }
 
 static ssize_t transdb_write(struct file *filp, const char __user *buf,
-                             size_t count,
-                             loff_t *f_pos)
+                             size_t count, loff_t *f_pos)
 {
-    return transdb_rw(TDB_WRITE, filp, buf, count, f_pos);
+    return transdb_rw(TDB_WRITE, filp, NULL, buf, count, f_pos);
 }
 
 long transdb_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
