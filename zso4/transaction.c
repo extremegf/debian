@@ -75,7 +75,7 @@ static void destroy_db_version(struct db_version *ver) {
 		struct radix_tree_iter iter;
 		found = 0;
 
-		radix_tree_for_each_slot(slot, &ver->segments, iter, start)	{
+		radix_tree_for_each_slot(slot, &ver->segments, &iter, start)	{
 			indices[found] = iter->index;
 			found += 1;
 
@@ -84,10 +84,10 @@ static void destroy_db_version(struct db_version *ver) {
 			}
 		}
 
-		start = iter->index;
+		start = iter.index;
 
 		for (i = 0; i < found; i++) {
-			void *db_seg = radix_tree_delete(&ver->segments);
+			void *db_seg = radix_tree_delete(&ver->segments, indices[i]);
 			kfree(db_seg);
 		}
 	} while(found > 0);
@@ -97,7 +97,7 @@ static void destroy_db_version(struct db_version *ver) {
 	kfree(ver);
 }
 
-int trans_init() {
+int trans_init(void) {
 	INIT_LIST_HEAD(&all_db_vers);
 
 	db_cur_ver = new_db_version(NULL);
@@ -106,29 +106,22 @@ int trans_init() {
 
 	commits_since_compat = 0;
 
-	memset(&null_seg->data, 0, SEGMENT_SIZE);
-	null_seg->ver_id = 0;
+	memset(&null_seg.data, 0, SEGMENT_SIZE);
+	null_seg.ver_id = 0;
 
 	next_ver = 1;
 
 	init_rwsem(&chain_rw_sem);
 }
 
-void trans_destroy() {
+void trans_destroy(void) {
 	struct db_version *ver, *n;
-
 	list_for_each_entry_safe(ver, n, &all_db_vers, all_other) {
 		destroy_db_version(ver);
 	}
-
 }
 
 /* Design
-
-trans_destroy()
-destroy po db_version
-zwalnia odbiekty db_version
-destroy locka?
 
 */
 
