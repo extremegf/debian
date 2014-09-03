@@ -5,7 +5,7 @@
 
 using namespace std;
 
-const size_t TEST_AREA_LENGTH = 10000;
+const size_t TEST_AREA_LENGTH = 10;
 const size_t TEST_COUNT = 100;
 const size_t MAX_SPAN = 2;
 const bool VERBOSE = 1;
