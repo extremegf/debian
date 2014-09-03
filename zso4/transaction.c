@@ -66,8 +66,11 @@ static struct db_version *new_db_version(struct db_version *parent)
 {
     struct db_version *ver = kmalloc(sizeof(struct db_version), GFP_KERNEL);
 
-    if (!ver)
+
+    if (!ver) {
+    	printk(KERN_INFO "ver = %p\n", ver);
         return NULL;
+    }
 
     INIT_RADIX_TREE(&ver->segments, GFP_KERNEL);
     list_add(&ver->all_other, &all_db_vers);
