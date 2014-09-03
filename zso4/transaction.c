@@ -323,8 +323,8 @@ static int merge_with_parent(struct db_version *ver)
                 err = radix_tree_insert(&ver->segments, indices[i], db_segs[i]);
                 if (err) {
                     // We ran out of memory. But we made sure that the
-                	// compaction can be safely aborted at any point.
-                	// The db will simply be a little slower.
+                    // compaction can be safely aborted at any point.
+                    // The db will simply be a little slower.
                     return err;
                 }
 
@@ -358,11 +358,11 @@ static void optimize_chain()
     while(ver && ver->parent) {
         if (ver->parent->child_cnt == 1) {
             // Merge parent into ver.
-        	int err;
+            int err;
             err = merge_with_parent(ver);
             if (err) {
-            	// We ran out of memory. Abort the optimization.
-            	ver = NULL;
+                // We ran out of memory. Abort the optimization.
+                ver = NULL;
             }
         } else {
             // Step.
@@ -455,22 +455,23 @@ trans_result_t finish_transaction(trans_result_t result,
 /*
  * Initializes (an already allocated) transaction context.
  */
-int init_trans_context(struct trans_context_t *trans) {
-	unsigned long flags;
-	struct db_version *ver;
+int init_trans_context(struct trans_context_t *trans)
+{
+    unsigned long flags;
+    struct db_version *ver;
 
-	rcu_read_lock();
-	trans->ver = new_db_version(rcu_dereference(db_cur_ver));
-	rcu_read_unlock();
-	if (!trans->ver)
-		return -ENOMEM;
+    rcu_read_lock();
+    trans->ver = new_db_version(rcu_dereference(db_cur_ver));
+    rcu_read_unlock();
+    if (!trans->ver)
+        return -ENOMEM;
 
-	spin_lock_irqsave(&next_ver_lock, flags);
-	trans->ver_id = next_ver;
-	next_ver += 1;
-	spin_unlock_irqrestore(&next_ver_lock, flags);
+    spin_lock_irqsave(&next_ver_lock, flags);
+    trans->ver_id = next_ver;
+    next_ver += 1;
+    spin_unlock_irqrestore(&next_ver_lock, flags);
 
-	INIT_LIST_HEAD(&trans->reads);
+    INIT_LIST_HEAD(&trans->reads);
 }
 
 /* Design
