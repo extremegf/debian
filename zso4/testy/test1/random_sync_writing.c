@@ -3,7 +3,7 @@
 #include <ctype.h>
 
 const size_t TEST_AREA_LENGTH = 3;
-const size_t TEST_COUNT = 2;
+const size_t TEST_COUNT = 10;
 const size_t MAX_SPAN = 1;
 
 #define CHECK(cond) \
@@ -30,8 +30,6 @@ int main() {
 		size_t pos, len;
 		char *data, *ref_data;
 
-		printf("test %d\n", test_nr);
-
 		do {
 		   pos = random() % TEST_AREA_LENGTH;
 		   len = random() % MAX_SPAN;
@@ -39,7 +37,8 @@ int main() {
 
 
 		if (rand() % 2 == 0) {
-			// Write!
+			printf("Test %d write\n", test_nr);
+
 			data = new char[len];
 			for (size_t i = 0; i < len; i++) {
 				data[i] = rand() % 0x100;
@@ -52,7 +51,7 @@ int main() {
 			delete[] data;
 		}
 		else {
-			// Read!
+			printf("Test %d read\n", test_nr);
 			data = new char[len];
 			ref_data = new char[len];
 
