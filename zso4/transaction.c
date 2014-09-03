@@ -124,7 +124,7 @@ int trans_init(void)
 
     init_rwsem(&chain_rw_sem);
 
-    sema_init(&db_cur_ver_w_lock);
+    sema_init(&db_cur_ver_w_lock, 1);
     spin_lock_init(&next_ver_lock);
 
     return 0;
@@ -241,7 +241,7 @@ char *get_read_segment(struct trans_context_t *trans, size_t seg_nr)
     // seg will not be kfree'ed while a read is taking place.
     up_read(&chain_rw_sem);
 
-    return &seg->data;
+    return seg->data;
 }
 
 
@@ -264,7 +264,7 @@ char *get_write_segment(struct trans_context_t *trans, size_t seg_nr)
     // seg will not be kfree'ed while a write is taking place.
     up_read(&chain_rw_sem);
 
-    return &seg->data;
+    return seg->data;
 }
 
 /*
@@ -337,13 +337,15 @@ static int merge_with_parent(struct db_version *ver)
     ver->parent = parent->parent;
     parent->parent = NULL;
     destroy_db_version(parent);
+
+    return 0;
 }
 
 /*
  * Shortens the db_version chain by merging links that have only one child
  * into the child.
  */
-static void optimize_chain()
+static void optimize_chain(void)
 {
     struct db_version *ver;
     down_write(&chain_rw_sem);
@@ -458,7 +460,6 @@ trans_result_t finish_transaction(trans_result_t result,
 int init_trans_context(struct trans_context_t *trans)
 {
     unsigned long flags;
-    struct db_version *ver;
 
     rcu_read_lock();
     trans->ver = new_db_version(rcu_dereference(db_cur_ver));
