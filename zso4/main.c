@@ -64,14 +64,13 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp, char __user *buf,
         if (rw == TDB_READ) {
             seg_data = get_read_segment(trans, seg_nr);
             not_copied = copy_to_user(buf, seg_data + ofs_in_seg, copy_len);
-        }
-        else {
-        	seg_data = get_write_segment(trans, seg_nr);
+        } else {
+            seg_data = get_write_segment(trans, seg_nr);
             not_copied = copy_from_user(seg_data + ofs_in_seg, buf, copy_len);
         }
 
         if (not_copied) {
-        	return copied + (copy_len - not_copied);
+            return copied + (copy_len - not_copied);
         }
 
         count -= copy_len;
@@ -91,26 +90,54 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp, char __user *buf,
 static ssize_t transdb_read(struct file *filp, char __user *buf, size_t count,
                             loff_t *f_pos)
 {
-	return transdb_rw(TDB_READ, filp, buf, count, f_pos);
+    return transdb_rw(TDB_READ, filp, buf, count, f_pos);
 }
 
 static ssize_t transdb_write(struct file *filp, char __user *buf, size_t count,
-                            loff_t *f_pos)
+                             loff_t *f_pos)
 {
-	return transdb_rw(TDB_WRITE, filp, buf, count, f_pos);
+    return transdb_rw(TDB_WRITE, filp, buf, count, f_pos);
+}
+
+long transdb_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	int retval = 0;
+
+	// Extract the type and number bitfields, and don't decode
+	// wrong cmds: return ENOTTY (inappropriate ioctl).
+    if (_IOC_TYPE(cmd) != _TRANSDB_IO_MAGIC) return -ENOTTY;
+	if (_IOC_NR(cmd) != 0x31 && _IOC_NR(cmd) != 0x32) return -ENOTTY;
+
+	switch(cmd) {
+	  case DB_COMMIT:
+		  retval = EDEADLK;
+		  if (filp->private_data) {
+			  if(finish_transaction(COMMIT, filp->private_data) == COMMIT){
+				  retval = 0;
+			  }
+		  }
+		break;
+
+	  case DB_ROLLBACK:
+        finish_transaction(ROLLBACK, filp->private_data)
+        retval = 0;
+		break;
+
+	  default:  /* redundant, as cmd was checked against MAXNR */
+		return -ENOTTY;
+	}
+
+	return retval;
 }
 
 static const struct file_operations db_fops = {
-owner:
-    THIS_MODULE,
-read:
-    transdb_read,
-write:
-    transdb_write,
-open:
-    transdb_open,
-release:
-    transdb_release,
+    .owner = THIS_MODULE,
+    .read = transdb_read,
+    .write = transdb_write,
+    .open = transdb_open,
+    .release = transdb_release,
+    .unlocked_ioctl = transdb_ioctl,
+    .compat_ioctl = transdb_ioctl,
 };
 
 
