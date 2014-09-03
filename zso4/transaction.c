@@ -76,7 +76,7 @@ static void destroy_db_version(struct db_version *ver) {
 		found = 0;
 
 		radix_tree_for_each_slot(slot, &ver->segments, &iter, start)	{
-			indices[found] = iter->index;
+			indices[found] = iter.index;
 			found += 1;
 
 			if (found == RADIX_TREE_GANG_SIZE) {

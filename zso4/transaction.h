@@ -24,4 +24,7 @@
 
 struct trans_context_t;
 
+int trans_init(void);
+void trans_destroy(void);
+
 #endif /* TRANSACTION_H_ */
