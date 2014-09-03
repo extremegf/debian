@@ -78,10 +78,7 @@ int main() {
 			fseek(ref, pos, SEEK_SET);
 
 			CHECK_EQ(fread(ref_data, 1, len, ref), len);
-			while(fread(data, 1, len, db) != len) {
-				//deb("Read retry\n");
-			}
-
+			CHECK_EQ(fread(data, 1, len, db), len);
 
 			for (size_t i = 0; i < len; i++) {
 				CHECK_EQ(data[i], ref_data[i]);
