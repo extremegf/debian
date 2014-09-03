@@ -78,7 +78,7 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
         }
 
         if (not_copied) {
-            printk(KERN_INFO "not copied", seg_data + ofs_in_seg);
+            printk(KERN_INFO "not copied\n");
             return copied + (copy_len - not_copied);
         }
 
