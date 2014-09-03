@@ -60,9 +60,13 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
         return -ENOMEM;
     }
 
+    printk(KERN_INFO "transacion was created\n");
+
     while (copy_len > 0) {
         char *seg_data;
         size_t not_copied;
+
+        printk(KERN_INFO "first copy iteration\n");
 
         if (rw == TDB_READ) {
             seg_data = get_read_segment(trans, seg_nr);
