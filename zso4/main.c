@@ -167,6 +167,8 @@ static int transdb_init_module(void)
 {
     int ret;
 
+    printk(KERN_INFO "transdb module inserted.\n");
+
     ret = trans_init();
     if (ret)
         printk(KERN_ERR "Unable initialize transactions (out of mem?)\n");
@@ -185,6 +187,7 @@ static int transdb_init_module(void)
 
 static void transdb_cleanup_module(void)
 {
+    printk(KERN_INFO "transdb module removed.\n");
     misc_deregister(&db_device);
     trans_destroy();
 }
