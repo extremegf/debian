@@ -9,7 +9,7 @@
 
 int main() {
 	FILE *db, *ref;
-
+dsf
 	CHECK(1 == 0);
 
 	db = fopen("/dev/db", "rw");
