@@ -164,6 +164,8 @@ static int transdb_init_module(void)
 {
     int ret;
 
+    printk(KERN_ERR "Za\n");
+
     ret = trans_init();
     if (ret)
         printk(KERN_ERR "Unable initialize transactions (out of mem?)\n");
