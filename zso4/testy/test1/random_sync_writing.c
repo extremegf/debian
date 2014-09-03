@@ -30,7 +30,7 @@ const bool VERBOSE = 1;
 int main() {
 	FILE *db, *ref;
 
-	db = fopen("/dev/db", "rb+");
+	db = fopen("/dev/db", "wb+");
 	CHECK(db != NULL);
 
 	ref = fopen("ref.txt", "wb+");
