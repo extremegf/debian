@@ -13,10 +13,10 @@ const size_t TEST_AREA_LENGTH = 100000;
 int main() {
 	FILE *db, *ref;
 
-	db = fopen("/dev/db", "rw");
+	db = fopen("/dev/db", "r+");
 	CHECK(db != NULL);
 
-	ref = fopen("ref.txt", "rw");
+	ref = fopen("ref.txt", "w+");
 	CHECK(ref != NULL);
 
 	// Clear out the ref file. Might be stale.
