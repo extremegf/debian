@@ -64,7 +64,8 @@ struct rw_semaphore chain_rw_sem;
 
 static struct db_version *new_db_version(struct db_version *parent)
 {
-    struct db_version *ver = kmalloc(GFP_KERNEL, sizeof(struct db_version));
+    struct db_version *ver = kmalloc(sizeof(struct db_version), GFP_KERNEL);
+
     if (!ver)
         return NULL;
 
@@ -463,8 +464,6 @@ struct trans_context_t *new_trans_context(void)
     unsigned long flags;
     struct trans_context_t *trans =
         kmalloc(sizeof(struct trans_context_t), GFP_KERNEL);
-
-    printk(KERN_INFO "new_trans_context alloc trans=%p\n", trans);
 
     if (!trans)
         return NULL;
