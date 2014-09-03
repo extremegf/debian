@@ -79,7 +79,7 @@ int main() {
 
 			CHECK_EQ(fread(ref_data, 1, len, ref), len);
 			while(fread(data, 1, len, db) != len) {
-				deb("Read retry\n");
+				//deb("Read retry\n");
 			}
 
 
