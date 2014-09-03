@@ -19,7 +19,6 @@
 typedef size_t ver_t;
 typedef enum { RECURSIVE, NO_RECURSIVE } recursive_t;
 typedef enum { REBASED, COLLISION } rebase_t;
-typedef enum { COMMIT, ROLLBACK } trans_result_t;
 
 struct seg_read {
     size_t seg_nr;
@@ -46,19 +45,19 @@ struct trans_context_t {
 };
 
 // DB versions path end. Readers obtain this via RCU. Writers use the spinlock.
-struct db_version *db_cur_ver;
-struct semaphore db_cur_ver_w_lock;
-size_t commits_since_compact;
+static struct db_version *db_cur_ver;
+static struct semaphore db_cur_ver_w_lock;
+static size_t commits_since_compact;
 
 // Represents infinite number of 0ed segments.
-struct db_seg null_seg;
+static struct db_seg null_seg;
 
 // List of all db version. Used for compaction and cleanup.
-struct list_head all_db_vers;
+static struct list_head all_db_vers;
 
 // Next version id.
-ver_t next_ver;
-spinlock_t next_ver_lock;
+static ver_t next_ver;
+static spinlock_t next_ver_lock;
 
 // Locks chain traversal, during compaction.
 struct rw_semaphore chain_rw_sem;
@@ -144,8 +143,8 @@ void trans_destroy(void)
  * If NO_RECURSIVE is set, it will only look for the segment in the
  * given db_version, returning null if it's not found.
  */
-struct db_seg* find_segment(struct db_version *ver, size_t seg_nr,
-                            recursive_t recurse)
+static struct db_seg* find_segment(struct db_version *ver, size_t seg_nr,
+                                   recursive_t recurse)
 {
     struct db_seg *found_db_seg = radix_tree_lookup(&ver->segments, seg_nr);
     if(found_db_seg) {
@@ -167,7 +166,8 @@ struct db_seg* find_segment(struct db_version *ver, size_t seg_nr,
  * that ver does not contain it. May fail due to lack of memory, in
  * which case it returns NULL.
  */
-struct db_seg* mimic_segment(struct db_version *ver, ver_t new_ver_id, size_t seg_nr)
+static struct db_seg* mimic_segment(struct db_version *ver, ver_t new_ver_id,
+                                    size_t seg_nr)
 {
     int err;
     struct db_seg *dst_seg = kmalloc(GFP_KERNEL, sizeof(struct db_seg));
@@ -196,7 +196,8 @@ struct db_seg* mimic_segment(struct db_version *ver, ver_t new_ver_id, size_t se
  * The concept is, that if all reads look the same, the transaction would
  * produce the same results, so we can safely change it's parent db_version.
  */
-rebase_t trans_rebase(struct trans_context_t *trans, struct db_version *onto)
+static rebase_t trans_rebase(struct trans_context_t *trans,
+                             struct db_version *onto)
 {
     struct seg_read *seg_read;
     list_for_each_entry(seg_read, &trans->reads, other_reads) {
@@ -455,17 +456,24 @@ trans_result_t finish_transaction(trans_result_t result,
 }
 
 /*
- * Initializes (an already allocated) transaction context.
+ * Creates a new transaction context. Must be freed with finish_transaction.
  */
-int init_trans_context(struct trans_context_t *trans)
+struct trans_context_t *new_trans_context(void)
 {
     unsigned long flags;
+    struct trans_context_t *trans =
+        kmalloc(sizeof(struct trans_context_t), GFP_KERNEL);
+
+    if (!trans)
+        return NULL;
 
     rcu_read_lock();
     trans->ver = new_db_version(rcu_dereference(db_cur_ver));
     rcu_read_unlock();
-    if (!trans->ver)
-        return -ENOMEM;
+    if (!trans->ver) {
+        kfree(trans);
+        return NULL;
+    }
 
     spin_lock_irqsave(&next_ver_lock, flags);
     trans->ver_id = next_ver;
@@ -476,8 +484,4 @@ int init_trans_context(struct trans_context_t *trans)
 
     return 0;
 }
-
-/* Design
-
-*/
 

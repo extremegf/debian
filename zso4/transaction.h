@@ -22,9 +22,17 @@
 // This constants regulates how often this is done.
 #define COMMITS_BEFORE_COMAPCTION 15
 
+typedef enum { COMMIT, ROLLBACK } trans_result_t;
+
 struct trans_context_t;
 
 int trans_init(void);
 void trans_destroy(void);
+
+struct trans_context_t *new_trans_context(void);
+char *get_write_segment(struct trans_context_t *trans, size_t seg_nr);
+char *get_read_segment(struct trans_context_t *trans, size_t seg_nr);
+trans_result_t finish_transaction(trans_result_t result,
+                                  struct trans_context_t *trans);
 
 #endif /* TRANSACTION_H_ */

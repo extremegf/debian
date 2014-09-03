@@ -15,42 +15,95 @@
 
 #include "transaction.h"
 
-static ssize_t hello_read(struct file * file, char * buf,
-                          size_t count, loff_t *ppos)
-{
-    char *hello_str = "Hello, world!\n";
-    int len = strlen(hello_str); /* Don't include the null byte. */
-    /*
-     * We only support reading the whole string at once.
-     */
-    if (count < len)
-        return -EINVAL;
-    /*
-     * If file position is non-zero, then assume the string has
-     * been read and indicate there is no more data to be read.
-     */
-    if (*ppos != 0)
-        return 0;
-    /*
-     * Besides copying the string to the user provided buffer,
-     * this function also checks that the user has permission to
-     * write to the buffer, that it is mapped, etc.
-     */
-    if (copy_to_user(buf, hello_str, len))
-        return -EINVAL;
-    /*
-     * Tell the user how much data we wrote.
-     */
-    *ppos = len;
+typedef enum { TDB_READ, TDB_WRITE } rw_t;
 
-    return len;
+static int transdb_open(struct inode *ino, struct file *filep)
+{
+    filep->private_data = NULL;
+    return 0;
+}
+
+static int transdb_release(struct inode *ino, struct file *filep)
+{
+    if (filep->private_data != NULL) {
+        finish_transaction(ROLLBACK, filep->private_data);
+        filep->private_data = NULL;
+    }
+    return 0;
+}
+
+//static size_t min(size_t a, size_t)
+
+static struct trans_context_t *open_trans_if_needed(struct file *filp)
+{
+    if (!filp->private_data) {
+        filp->private_data = new_trans_context();
+    }
+    return filp->private_data;
+}
+
+static ssize_t transdb_rw(rw_t rw, struct file *filp, char __user *buf,
+                          size_t count, loff_t *f_pos)
+{
+    size_t seg_nr = *f_pos / SEGMENT_SIZE;
+    size_t ofs_in_seg = *f_pos % SEGMENT_SIZE;
+    size_t len_in_seg = SEGMENT_SIZE - ofs_in_seg;
+    size_t copy_len = min(len_in_seg, count);
+    size_t copied = 0;
+    struct trans_context_t *trans = open_trans_if_needed(filp);
+
+    if (!trans) {
+        return -ENOMEM;
+    }
+
+    while (copy_len > 0) {
+        char *seg_data;
+        if (rw == TDB_READ) {
+            seg_data = get_read_segment(trans, seg_nr);
+            copy_to_user(buf, seg_data + ofs_in_seg, copy_len);
+        }
+        else {
+        	seg_data = get_write_segment(trans, seg_nr);
+            copy_from_user(seg_data + ofs_in_seg, buf, copy_len);
+        }
+
+        count -= copy_len;
+        buf += copy_len;
+        *f_pos += copy_len;
+        copied += copy_len;
+
+        seg_nr = *f_pos / SEGMENT_SIZE;
+        ofs_in_seg = *f_pos % SEGMENT_SIZE;
+        len_in_seg = SEGMENT_SIZE - ofs_in_seg;
+        copy_len = min(len_in_seg, count);
+    }
+
+    return copied;
+}
+
+static ssize_t transdb_read(struct file *filp, char __user *buf, size_t count,
+                            loff_t *f_pos)
+{
+	return transdb_rw(TDB_READ, filp, buf, count, f_pos);
+}
+
+static ssize_t transdb_write(struct file *filp, char __user *buf, size_t count,
+                            loff_t *f_pos)
+{
+	return transdb_rw(TDB_WRITE, filp, buf, count, f_pos);
 }
 
 static const struct file_operations db_fops = {
 owner:
     THIS_MODULE,
 read:
-    hello_read,
+    transdb_read,
+write:
+    transdb_write,
+open:
+    transdb_open,
+release:
+    transdb_release,
 };
 
 
@@ -104,4 +157,14 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Przemyslaw Horban <p.horban@mimuw.edu.pl>");
 MODULE_DESCRIPTION("Transactional database in the kernel.");
 
+
+/* Design
+read/write
+gdy private_data == NULL alokuje trans_context i init_trans_context
+get_read_segment, get_write_segment do kopiowania z i do bufora
+na locku
+ioctl()
+woła finish_transaction i ustawia private_data
+
+*/
 
