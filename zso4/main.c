@@ -93,7 +93,8 @@ static ssize_t transdb_read(struct file *filp, char __user *buf, size_t count,
     return transdb_rw(TDB_READ, filp, buf, count, f_pos);
 }
 
-static ssize_t transdb_write(struct file *filp, char __user *buf, size_t count,
+static ssize_t transdb_write(struct file *filp, const char __user *buf,
+                             size_t count,
                              loff_t *f_pos)
 {
     return transdb_rw(TDB_WRITE, filp, buf, count, f_pos);
@@ -101,33 +102,33 @@ static ssize_t transdb_write(struct file *filp, char __user *buf, size_t count,
 
 long transdb_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	int retval = 0;
+    int retval = 0;
 
-	// Extract the type and number bitfields, and don't decode
-	// wrong cmds: return ENOTTY (inappropriate ioctl).
+    // Extract the type and number bitfields, and don't decode
+    // wrong cmds: return ENOTTY (inappropriate ioctl).
     if (_IOC_TYPE(cmd) != _TRANSDB_IO_MAGIC) return -ENOTTY;
-	if (_IOC_NR(cmd) != 0x31 && _IOC_NR(cmd) != 0x32) return -ENOTTY;
+    if (_IOC_NR(cmd) != 0x31 && _IOC_NR(cmd) != 0x32) return -ENOTTY;
 
-	switch(cmd) {
-	  case DB_COMMIT:
-		  retval = EDEADLK;
-		  if (filp->private_data) {
-			  if(finish_transaction(COMMIT, filp->private_data) == COMMIT){
-				  retval = 0;
-			  }
-		  }
-		break;
+    switch(cmd) {
+    case DB_COMMIT:
+        retval = EDEADLK;
+        if (filp->private_data) {
+            if(finish_transaction(COMMIT, filp->private_data) == COMMIT) {
+                retval = 0;
+            }
+        }
+        break;
 
-	  case DB_ROLLBACK:
-        finish_transaction(ROLLBACK, filp->private_data)
+    case DB_ROLLBACK:
+        finish_transaction(ROLLBACK, filp->private_data);
         retval = 0;
-		break;
+        break;
 
-	  default:  /* redundant, as cmd was checked against MAXNR */
-		return -ENOTTY;
-	}
+    default:  /* redundant, as cmd was checked against MAXNR */
+        return -ENOTTY;
+    }
 
-	return retval;
+    return retval;
 }
 
 static const struct file_operations db_fops = {
