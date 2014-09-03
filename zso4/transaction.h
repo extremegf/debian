@@ -7,9 +7,9 @@
 #ifndef TRANSACTION_H_
 #define TRANSACTION_H_
 
-/* Controlls the size of DB segments. Segment is a minimal
+/* Controls the size of DB segments. Segment is a minimal
  * locking unit for the db. If two transactions read and write to
- * a single semgment, then one of them will fail.
+ * a single segment, then one of them will fail.
  * Increasing the segment size reduces memory and computational
  * overheads, at the cost of more rollbacks.
  */
