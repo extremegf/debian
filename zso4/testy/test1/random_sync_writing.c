@@ -3,8 +3,8 @@
 #include <ctype.h>
 
 const size_t TEST_AREA_LENGTH = 10;
-const size_t TEST_COUNT = 100000;
-const size_t MAX_SPAN = 1;
+const size_t TEST_COUNT = 10;
+const size_t MAX_SPAN = 2;
 const bool VERBOSE = false;
 
 #define deb(...) if(VERBOSE) { printf (__VA_ARGS__); }
