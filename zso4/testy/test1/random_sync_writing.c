@@ -16,6 +16,13 @@ const bool VERBOSE = 1;
         exit(-1); \
     }
 
+#define CHECK_EQ(a, b) \
+	if ((a) != (b)) { \
+		cerr << __FILE__ << ':' << __LINE__ << ": CHECK_EQ(" \
+				<< #a << ", " << #b << ") failed\n"; \
+        exit(-1); \
+	}
+
 int main() {
 	FILE *db, *ref;
 
@@ -66,7 +73,7 @@ int main() {
 			fread(ref_data, 1, len, ref);
 
 			for (size_t i = 0; i < len; i++) {
-				CHECK(data[i] == ref_data[i]);
+				CHECK_EQ(data[i], ref_data[i]);
 			}
 
 			delete[] data;
