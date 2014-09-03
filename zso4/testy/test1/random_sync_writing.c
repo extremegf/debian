@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-const size_t TEST_AREA_LENGTH = 100000;
-const size_t TEST_COUNT = 1000000;
-const size_t MAX_SPAN = 10000;
+const size_t TEST_AREA_LENGTH = 3;
+const size_t TEST_COUNT = 2;
+const size_t MAX_SPAN = 1;
 
 #define CHECK(cond) \
 	if (!(cond)) { \

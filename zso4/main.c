@@ -65,10 +65,13 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
         if (rw == TDB_READ) {
             seg_data = get_read_segment(trans, seg_nr);
             not_copied = copy_to_user(buf, seg_data + ofs_in_seg, copy_len);
+            printk(KERN_INFO "transdb_rw read %s", seg_data + ofs_in_seg);
+
         } else {
             seg_data = get_write_segment(trans, seg_nr);
             not_copied = copy_from_user(seg_data + ofs_in_seg, const_buf,
                                         copy_len);
+            printk(KERN_INFO "transdb_rw read %s", seg_data + ofs_in_seg);
         }
 
         if (not_copied) {
@@ -163,8 +166,6 @@ static struct miscdevice db_device = {
 static int transdb_init_module(void)
 {
     int ret;
-
-    printk(KERN_ERR "Za\n");
 
     ret = trans_init();
     if (ret)
