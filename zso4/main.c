@@ -73,6 +73,10 @@ static int transdb_init_module(void)
 {
     int ret;
 
+    ret = trans_init();
+    if (ret)
+        printk(KERN_ERR "Unable initialize transactions (out of mem?)\n");
+
     /*
      * Create the "db" device in the /sys/class/misc directory.
      * Udev will automatically create the /dev/db device using
@@ -80,7 +84,7 @@ static int transdb_init_module(void)
      */
     ret = misc_register(&db_device);
     if (ret)
-        printk(KERN_ERR "Unable to register \"Hello, world!\" misc device\n");
+        printk(KERN_ERR "Unable to register /dev/db device\n");
 
     return ret;
 }
@@ -88,6 +92,7 @@ static int transdb_init_module(void)
 static void transdb_cleanup_module(void)
 {
     misc_deregister(&db_device);
+    trans_destroy();
 }
 
 module_init(transdb_init_module);
