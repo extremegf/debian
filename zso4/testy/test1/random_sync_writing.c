@@ -24,5 +24,6 @@ int main() {
 		fputc(0, ref);
 	}
 
+	puts("OK");
 	return 0;
 }
