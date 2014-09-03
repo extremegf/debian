@@ -75,6 +75,7 @@ int main() {
 			fseek(db, pos, SEEK_SET);
 			fseek(ref, pos, SEEK_SET);
 
+			deb("len = %d\n", len);
 			CHECK_EQ(fread(data, 1, len, db), len);
 			CHECK_EQ(fread(ref_data, 1, len, ref), len);
 
