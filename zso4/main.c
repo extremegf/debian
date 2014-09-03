@@ -18,6 +18,8 @@
 
 typedef enum { TDB_READ, TDB_WRITE } rw_t;
 
+#define show_int(name) printk(KERN_INFO, #name " = %d\n", name);
+
 static int transdb_open(struct inode *ino, struct file *filep)
 {
     filep->private_data = NULL;
@@ -85,6 +87,9 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
         buf += copy_len;
         *f_pos += copy_len;
         copied += copy_len;
+        show_int(count)
+        show_int(copy_len)
+        show_int(copied)
 
         printk(KERN_INFO "copied %d bytes\n", copy_len);
 
