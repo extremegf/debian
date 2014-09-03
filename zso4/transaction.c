@@ -15,6 +15,7 @@
 #define RADIX_TREE_GANG_SIZE 100
 
 typedef size_t ver_t;
+typedef enum { RECURSIVE, NO_RECURSIVE } recursive_t;
 
 struct seg_read {
     size_t seg_nr;
@@ -55,10 +56,11 @@ ver_t next_ver;
 // Locks chain traversal, during compaction.
 struct rw_semaphore chain_rw_sem;
 
-static struct db_version *new_db_version(struct db_version *parent) {
-	struct db_version *ver = kmalloc(GFP_KERNEL, sizeof(struct db_version));
-	if (!ver)
-		return NULL;
+static struct db_version *new_db_version(struct db_version *parent)
+{
+    struct db_version *ver = kmalloc(GFP_KERNEL, sizeof(struct db_version));
+    if (!ver)
+        return NULL;
 
     INIT_RADIX_TREE(&ver->segments, GFP_KERNEL);
     list_add(&ver->all_other, &all_db_vers);
@@ -66,62 +68,83 @@ static struct db_version *new_db_version(struct db_version *parent) {
     return ver;
 }
 
-static void destroy_db_version(struct db_version *ver) {
-	size_t indices[RADIX_TREE_GANG_SIZE];
-	size_t found, start = 0, i;
+static void destroy_db_version(struct db_version *ver)
+{
+    size_t indices[RADIX_TREE_GANG_SIZE];
+    size_t found, start = 0, i;
 
-	do {
-		void **slot;
-		struct radix_tree_iter iter;
-		found = 0;
+    do {
+        void **slot;
+        struct radix_tree_iter iter;
+        found = 0;
 
-		radix_tree_for_each_slot(slot, &ver->segments, &iter, start)	{
-			indices[found] = iter.index;
-			found += 1;
+        radix_tree_for_each_slot(slot, &ver->segments, &iter, start)	{
+            indices[found] = iter.index;
+            found += 1;
 
-			if (found == RADIX_TREE_GANG_SIZE) {
-				break;
-			}
-		}
+            if (found == RADIX_TREE_GANG_SIZE) {
+                break;
+            }
+        }
 
-		start = iter.index;
+        start = iter.index;
 
-		for (i = 0; i < found; i++) {
-			void *db_seg = radix_tree_delete(&ver->segments, indices[i]);
-			kfree(db_seg);
-		}
-	} while(found > 0);
+        for (i = 0; i < found; i++) {
+            void *db_seg = radix_tree_delete(&ver->segments, indices[i]);
+            kfree(db_seg);
+        }
+    } while(found > 0);
 
-	list_del(&ver->all_other);
+    list_del(&ver->all_other);
 
-	kfree(ver);
+    kfree(ver);
 }
 
-int trans_init(void) {
-	INIT_LIST_HEAD(&all_db_vers);
+int trans_init(void)
+{
+    INIT_LIST_HEAD(&all_db_vers);
 
-	db_cur_ver = new_db_version(NULL);
-	if (!db_cur_ver)
-		return -ENOMEM;
+    db_cur_ver = new_db_version(NULL);
+    if (!db_cur_ver)
+        return -ENOMEM;
 
-	commits_since_compat = 0;
+    commits_since_compat = 0;
 
-	memset(&null_seg.data, 0, SEGMENT_SIZE);
-	null_seg.ver_id = 0;
+    memset(&null_seg.data, 0, SEGMENT_SIZE);
+    null_seg.ver_id = 0;
 
-	next_ver = 1;
+    next_ver = 1;
 
-	init_rwsem(&chain_rw_sem);
+    init_rwsem(&chain_rw_sem);
+
+    return 0;
 }
 
-void trans_destroy(void) {
-	struct db_version *ver, *n;
-	list_for_each_entry_safe(ver, n, &all_db_vers, all_other) {
-		destroy_db_version(ver);
-	}
+void trans_destroy(void)
+{
+    struct db_version *ver, *n;
+    list_for_each_entry_safe(ver, n, &all_db_vers, all_other) {
+        destroy_db_version(ver);
+    }
+}
+
+void find_segment(struct db_version &ver, size_t seg_nr,
+                  recursive_t recurse, struct db_seg* found_db_seg)
+{
+
+
+}
+
+int mimic_segment(ver_t ver_id, size_t seg_nr)
+{
+
 }
 
 /* Design
+mimic_segment(ver, nr)
+szuka segmentu lokalnie, potem dodaje go tu i kopiuje zawartosc
+find_segment(ver, nr, recursive, seg*)
+szuka segmentu w mapie albo pyta rodzica, jesli korzen, zwraca 0wy
 
 */
 

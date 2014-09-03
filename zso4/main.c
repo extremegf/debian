@@ -13,6 +13,8 @@
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 
+#include "transaction.h"
+
 static ssize_t hello_read(struct file * file, char * buf,
                           size_t count, loff_t *ppos)
 {
