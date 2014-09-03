@@ -49,7 +49,7 @@ int main() {
 
 		do {
 		   pos = random() % TEST_AREA_LENGTH;
-		   len = random() % MAX_SPAN;
+		   len = 1 + random() % MAX_SPAN;
 		} while (pos + len > TEST_AREA_LENGTH);
 
 
