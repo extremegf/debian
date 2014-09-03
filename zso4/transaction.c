@@ -42,7 +42,7 @@ struct db_version {
 struct trans_context_t {
     ver_t ver_id;
     struct list_head reads;
-    struct db_version ver;
+    struct db_version *ver;
 };
 
 // DB versions path end. Readers obtain this via RCU. Writers use the spinlock.
@@ -271,7 +271,7 @@ char *get_write_segment(struct trans_context_t *trans, size_t seg_nr)
  * Recomputes all child_cnt variables in all of the db_versions in existence.
  * Assumes chain_rw_sem in write lock.
  */
-static void update_child_cnt()
+static void update_child_cnt(void)
 {
     struct db_version *ver, *n;
     list_for_each_entry_safe(ver, n, &all_db_vers, all_other) {
@@ -421,7 +421,7 @@ static trans_result_t do_commit(struct trans_context_t *trans,
 trans_result_t finish_transaction(trans_result_t result,
                                   struct trans_context_t *trans)
 {
-    struct seg_read *seg, n;
+    struct seg_read *seg, *n;
     int compaction_necessary = 0;
     down_read(&chain_rw_sem);
 
@@ -472,6 +472,8 @@ int init_trans_context(struct trans_context_t *trans)
     spin_unlock_irqrestore(&next_ver_lock, flags);
 
     INIT_LIST_HEAD(&trans->reads);
+
+    return 0;
 }
 
 /* Design
