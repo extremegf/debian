@@ -63,8 +63,8 @@ int main() {
 			fseek(db, pos, SEEK_SET);
 			fseek(ref, pos, SEEK_SET);
 
-			CHECK_EQ(fwrite(data, 1, len, db), len);
 			CHECK_EQ(fwrite(data, 1, len, ref), len);
+			CHECK_EQ(fwrite(data, 1, len, db), len);
 			delete[] data;
 		}
 		else {
@@ -75,8 +75,8 @@ int main() {
 			fseek(db, pos, SEEK_SET);
 			fseek(ref, pos, SEEK_SET);
 
-			CHECK_EQ(fread(data, 1, len, db), len);
 			CHECK_EQ(fread(ref_data, 1, len, ref), len);
+			CHECK_EQ(fread(data, 1, len, db), len);
 
 			for (size_t i = 0; i < len; i++) {
 				CHECK_EQ(data[i], ref_data[i]);
