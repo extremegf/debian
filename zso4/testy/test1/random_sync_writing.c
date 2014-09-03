@@ -3,13 +3,13 @@
 
 #define CHECK(cond) \
 	if (!(cond)) { \
-		fprintf(stderr, "CHECK(" #cond ") failed at %s:%d\n", __FILE__, __LINE__); \
+		fprintf(stderr, "%s:%d: CHECK(" #cond ") failed\n", __FILE__, __LINE__); \
         exit(-1); \
     }
 
 int main() {
 	FILE *db, *ref;
-dsf
+
 	CHECK(1 == 0);
 
 	db = fopen("/dev/db", "rw");
