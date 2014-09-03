@@ -55,8 +55,6 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
     size_t copied = 0;
     struct trans_context_t *trans = open_trans_if_needed(filp);
 
-    printk(KERN_INFO "We got a transdb_rw trans=%p\n", trans);
-
     if (!trans) {
         return -ENOMEM;
     }
