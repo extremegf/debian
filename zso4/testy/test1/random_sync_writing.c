@@ -30,6 +30,8 @@ const bool VERBOSE = 1;
 int main() {
 	FILE *db, *ref;
 
+	srand(0); // Derandomize.
+
 	db = fopen("/dev/db", "wb+");
 	CHECK(db != NULL);
 
