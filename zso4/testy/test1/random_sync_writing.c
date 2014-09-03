@@ -5,6 +5,10 @@
 const size_t TEST_AREA_LENGTH = 3;
 const size_t TEST_COUNT = 10;
 const size_t MAX_SPAN = 1;
+const bool VERBOSE = false;
+
+#define deb(...) if(VERBOSE) { printf (__VA_ARGS__); }
+
 
 #define CHECK(cond) \
 	if (!(cond)) { \
@@ -37,7 +41,7 @@ int main() {
 
 
 		if (rand() % 2 == 0) {
-			printf("Test %d write\n", test_nr);
+			deb("Test %d write\n", test_nr);
 
 			data = new char[len];
 			for (size_t i = 0; i < len; i++) {
@@ -51,7 +55,7 @@ int main() {
 			delete[] data;
 		}
 		else {
-			printf("Test %d read\n", test_nr);
+			deb("Test %d read\n", test_nr);
 			data = new char[len];
 			ref_data = new char[len];
 
