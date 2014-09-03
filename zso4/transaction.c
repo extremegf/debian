@@ -464,6 +464,8 @@ struct trans_context_t *new_trans_context(void)
     struct trans_context_t *trans =
         kmalloc(sizeof(struct trans_context_t), GFP_KERNEL);
 
+    printk(KERN_INFO "new_trans_context alloc trans=%p\n", trans);
+
     if (!trans)
         return NULL;
 
