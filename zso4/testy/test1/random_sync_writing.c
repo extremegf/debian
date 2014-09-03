@@ -22,7 +22,7 @@ const bool VERBOSE = 1;
 #define CHECK_EQ(a, b) \
 	if ((a) != (b)) { \
 		cerr << __FILE__ << ':' << __LINE__ << ": CHECK_EQ(" \
-				<< #a << ", " << #b << ") failed\n"; \
+				<< a << ", " << b << ") failed\n"; \
         exit(-1); \
 	}
 
