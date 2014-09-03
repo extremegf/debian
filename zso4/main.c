@@ -22,12 +22,14 @@ typedef enum { TDB_READ, TDB_WRITE } rw_t;
 
 static int transdb_open(struct inode *ino, struct file *filep)
 {
+    printk(KERN_INFO "transdb_open()\n");
     filep->private_data = NULL;
     return 0;
 }
 
 static int transdb_release(struct inode *ino, struct file *filep)
 {
+    printk(KERN_INFO "transdb_release()\n");
     if (filep->private_data != NULL) {
         finish_transaction(ROLLBACK, filep->private_data);
         filep->private_data = NULL;
@@ -101,20 +103,22 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
 static ssize_t transdb_read(struct file *filp, char __user *buf, size_t count,
                             loff_t *f_pos)
 {
-    printk(KERN_INFO "transdb_read\n");
+    printk(KERN_INFO "transdb_read()\n");
     return transdb_rw(TDB_READ, filp, buf, NULL, count, f_pos);
 }
 
 static ssize_t transdb_write(struct file *filp, const char __user *buf,
                              size_t count, loff_t *f_pos)
 {
-    printk(KERN_INFO "transdb_write\n");
+    printk(KERN_INFO "transdb_write()\n");
     return transdb_rw(TDB_WRITE, filp, NULL, buf, count, f_pos);
 }
 
 long transdb_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     int retval = 0;
+
+    printk(KERN_INFO "transdb_ioctl()\n");
 
     // Extract the type and number bitfields, and don't decode
     // wrong cmds: return ENOTTY (inappropriate ioctl).
