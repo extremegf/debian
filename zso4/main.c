@@ -94,7 +94,7 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
         copy_len = min(len_in_seg, count);
     }
 
-    printk(KERN_INFO "return copied = %d\n", copy_len);
+    printk(KERN_INFO "return copied = %d\n", copied);
     return copied;
 }
 
