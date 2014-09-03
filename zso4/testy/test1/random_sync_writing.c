@@ -52,6 +52,8 @@ int main() {
 		   len = 1 + random() % MAX_SPAN;
 		} while (pos + len > TEST_AREA_LENGTH);
 
+		deb("pos = %d, len = %d", pos, len);
+
 
 		if (rand() % 2 == 0) {
 			deb("Test %d write\n", test_nr);
