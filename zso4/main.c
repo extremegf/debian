@@ -14,6 +14,7 @@
 #include <linux/module.h>
 
 #include "transaction.h"
+#include "transdb.h"
 
 typedef enum { TDB_READ, TDB_WRITE } rw_t;
 
@@ -58,13 +59,19 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp, char __user *buf,
 
     while (copy_len > 0) {
         char *seg_data;
+        size_t not_copied;
+
         if (rw == TDB_READ) {
             seg_data = get_read_segment(trans, seg_nr);
-            copy_to_user(buf, seg_data + ofs_in_seg, copy_len);
+            not_copied = copy_to_user(buf, seg_data + ofs_in_seg, copy_len);
         }
         else {
         	seg_data = get_write_segment(trans, seg_nr);
-            copy_from_user(seg_data + ofs_in_seg, buf, copy_len);
+            not_copied = copy_from_user(seg_data + ofs_in_seg, buf, copy_len);
+        }
+
+        if (not_copied) {
+        	return copied + (copy_len - not_copied);
         }
 
         count -= copy_len;
