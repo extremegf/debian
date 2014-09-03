@@ -3,7 +3,7 @@
 
 #define CHECK(cond) \
 	if (!(cond)) { \
-		fprintf(stderr, "CHECK(" #cond ") failed at %s:%d", __FILE__, __LINE__); \
+		fprintf(stderr, "CHECK(" #cond ") failed at %s:%d\n", __FILE__, __LINE__); \
         exit(-1); \
     }
 
