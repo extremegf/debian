@@ -70,8 +70,8 @@ int main() {
 			len = 1 + random() % MAX_SPAN;
 		} while (pos + len > TEST_AREA_LENGTH);
 
-		CHECK_EQ(lseek(dbf, pos, SEEK_SET), 0);
-		CHECK_EQ(lseekarray(pos, SEEK_SET), 0);
+		CHECK_EQ(lseek(dbf, pos, SEEK_SET), pos);
+		CHECK_EQ(lseekarray(pos, SEEK_SET), pos);
 
 		data = new char[len];
 		ref_data = new char[len];
