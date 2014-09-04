@@ -1,3 +1,5 @@
+#include <unistd.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -29,19 +31,19 @@ const bool ONLY_READS = 0;
 	}
 
 int main() {
-	FILE *db, *ref;
+	int dbf, ref;
 
 	srand(0); // Derandomize.
 
-	db = fopen("/dev/db", "r+");
-	CHECK(db != NULL);
+	dbf = open("/dev/db", O_RDWR);
+	CHECK(dbf != 0);
 
-	ref = fopen("ref.txt", "r+");
-	CHECK(ref != NULL);
+	ref = open("ref.txt", O_RDWR);
+	CHECK(ref != 0);
 
 	// Clear out the ref file. Might be stale.
 	for (int i = 0; i < TEST_AREA_LENGTH; i++) {
-		fputc(0, ref);
+		write(ref, "\0", 1);
 	}
 
 	for (size_t test_nr = 0; test_nr < TEST_COUNT; test_nr++) {
@@ -53,8 +55,7 @@ int main() {
 		   len = 1 + random() % MAX_SPAN;
 		} while (pos + len > TEST_AREA_LENGTH);
 
-		deb("pos = %d, len = %d\n", pos, len);
-
+		deb("Picked pos = %d and len = %d\n", pos, len);
 
 		if (!ONLY_READS && rand() % 2 == 0) {
 			deb("Test %d write\n", test_nr);
@@ -63,11 +64,11 @@ int main() {
 			for (size_t i = 0; i < len; i++) {
 				data[i] = rand() % 0x100;
 			}
-			fseek(db, pos, SEEK_SET);
-			fseek(ref, pos, SEEK_SET);
+			lseek(dbf, pos, SEEK_SET);
+			lseek(ref, pos, SEEK_SET);
 
-			CHECK_EQ(fwrite(data, 1, len, ref), len);
-			CHECK_EQ(fwrite(data, 1, len, db), len);
+			CHECK_EQ(write(ref, data, len), len);
+			CHECK_EQ(write(dbf, data, len), len);
 			delete[] data;
 		}
 		else {
@@ -75,17 +76,15 @@ int main() {
 			data = new char[len];
 			ref_data = new char[len];
 
-			fseek(db, pos, SEEK_SET);
-			fseek(ref, pos, SEEK_SET);
+			lseek(dbf, pos, SEEK_SET);
+			lseek(ref, pos, SEEK_SET);
 
-			CHECK_EQ(fread(ref_data, 1, len, ref), len);
-			CHECK_EQ(fread(data, 1, len, db), len);
+			CHECK_EQ(read(ref, ref_data, len), len);
+			CHECK_EQ(read(dbf, data, len), len);
 
 			for (size_t i = 0; i < len; i++) {
-				putchar(data[i]);
-				//CHECK_EQ(data[i], ref_data[i]);
+				CHECK_EQ(data[i], ref_data[i]);
 			}
-			putchar('\n');
 
 			delete[] data;
 			delete[] ref_data;
