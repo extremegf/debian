@@ -43,7 +43,7 @@ int main() {
 
 	// Clear out the ref file. Might be stale.
 	for (int i = 0; i < TEST_AREA_LENGTH; i++) {
-		write(ref, "\0", 1);
+		write(ref, "\0", 1);rmmod transdb; insmod /root/linux-3.13.3/zso4/transdb.ko
 	}
 
 	for (size_t test_nr = 0; test_nr < TEST_COUNT; test_nr++) {
