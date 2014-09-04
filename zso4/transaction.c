@@ -487,3 +487,37 @@ struct trans_context_t *new_trans_context(void)
     return trans;
 }
 
+static void printk_db_version(const char *entry_prefix, const char *pre_indent,
+                             const char *indent, struct db_version *ver)
+{
+    void **slot;
+    struct radix_tree_iter iter;
+    size_t i;
+
+    printk(KERN_INFO "%s%sdb_version:\n", pre_indent, entry_prefix);
+    printk(KERN_INFO "%s%ssegments:\n", pre_indent, indent);
+    radix_tree_for_each_slot(slot, &ver->segments, &iter, 0)	{
+        struct db_seg *seg = *slot;
+        printk(KERN_INFO "%s%s%s%3d: %3d [ ", pre_indent, indent, indent,
+               (int)iter.index, (int)seg->ver_id);
+        for (i = 0; i < SEGMENT_SIZE; i++) {
+            printk(KERN_INFO "%2X ", (int)seg->data[i]);
+        }
+        printk(KERN_INFO "]\n");
+    }
+    printk(KERN_INFO "%s%schild_cnt: %d\n", pre_indent, indent,
+           (int)ver->child_cnt);
+}
+
+/*
+ * Logs a readable representation of the database.
+ */
+void printk_db_versions(void)
+{
+    struct db_version *ver = db_cur_ver;
+    while(ver) {
+    	printk_db_version("^", "", "    ", ver);
+    	ver = ver->parent;
+    }
+}
+

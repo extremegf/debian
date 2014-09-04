@@ -35,4 +35,6 @@ char *get_read_segment(struct trans_context_t *trans, size_t seg_nr);
 trans_result_t finish_transaction(trans_result_t result,
                                   struct trans_context_t *trans);
 
+void printk_db_versions(void);
+
 #endif /* TRANSACTION_H_ */

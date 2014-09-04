@@ -97,6 +97,7 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
     }
 
     printk(KERN_INFO "return copied = %d\n", copied);
+    printk_db_versions();
     return copied;
 }
 
