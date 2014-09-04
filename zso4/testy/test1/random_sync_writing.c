@@ -34,7 +34,7 @@ size_t arr_pos = 0;
 
 int lseekarray(size_t pos, int _) {
 	arr_pos = pos;
-	return 0;
+	return arr_pos;
 }
 
 size_t readarray(char *data, size_t len) {
