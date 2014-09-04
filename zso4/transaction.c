@@ -260,8 +260,11 @@ char *get_write_segment(struct trans_context_t *trans, size_t seg_nr)
     down_read(&chain_rw_sem);
     seg = find_segment(trans->ver, seg_nr, NO_RECURSIVE);
 
+    printk(KERN_INFO "get_write_segment: seg = %p\n", seg);
+
     if(!seg) {
         seg = mimic_segment(trans->ver, trans->ver_id, seg_nr);
+        printk(KERN_INFO "get_write_segment: mimic_segment seg=%p\n", seg);
     }
 
     // seg will not be kfree'ed while a write is taking place.
