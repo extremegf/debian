@@ -503,6 +503,7 @@ static void printk_db_version(const char *entry_prefix, const char *pre_indent,
 
     printk(KERN_INFO "%s%sdb_version:\n", pre_indent, entry_prefix);
     printk(KERN_INFO "%s%ssegments:\n", pre_indent, indent);
+    printk(KERN_INFO "radix_tree_iter_init=%p", radix_tree_iter_init(iter, 0));
     radix_tree_for_each_slot(slot, &ver->segments, &iter, 0)	{
         struct db_seg *seg = *slot;
         printk(KERN_INFO "%s%s%s%3d: %3d [ ", pre_indent, indent, indent,
