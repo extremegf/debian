@@ -69,7 +69,7 @@ static struct db_version *new_db_version(struct db_version *parent)
     if (!ver)
         return NULL;
 
-    INIT_RADIX_TREE(&ver->segments, GFP_KERNEL);
+    INIT_RADIX_TREE(ver->segments, GFP_KERNEL);
     list_add(&ver->all_other, &all_db_vers);
     ver->parent = parent;
     return ver;
