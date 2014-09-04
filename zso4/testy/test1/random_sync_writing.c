@@ -53,7 +53,7 @@ int main() {
 		   len = 1 + random() % MAX_SPAN;
 		} while (pos + len > TEST_AREA_LENGTH);
 
-		deb("pos = %d, len = %d", pos, len);
+		deb("pos = %d, len = %d\n", pos, len);
 
 
 		if (rand() % 2 == 0) {
@@ -82,8 +82,10 @@ int main() {
 			CHECK_EQ(fread(data, 1, len, db), len);
 
 			for (size_t i = 0; i < len; i++) {
+				putchar(data[i]);
 				//CHECK_EQ(data[i], ref_data[i]);
 			}
+			putchar('\n');
 
 			delete[] data;
 			delete[] ref_data;
