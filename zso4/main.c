@@ -57,10 +57,7 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
     size_t len_in_seg = SEGMENT_SIZE - ofs_in_seg;
     size_t copy_len = min(len_in_seg, count);
     size_t copied = 0;
-    struct trans_context_t *trans;// = open_trans_if_needed(filp);
-    return count;
-    /*
-
+    struct trans_context_t *trans = open_trans_if_needed(filp);
 
     printk(KERN_INFO "We got a transdb_rw trans=%p\n", trans);
 
@@ -100,7 +97,7 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
     }
 
     printk(KERN_INFO "return copied = %d\n", copied);
-    return copied;*/
+    return copied;
 }
 
 static ssize_t transdb_read(struct file *filp, char __user *buf, size_t count,
