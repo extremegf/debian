@@ -30,21 +30,37 @@ const bool ONLY_READS = 0;
         exit(-1); \
 	}
 
+char ARRAY[TEST_AREA_LENGTH];
+size_t arr_pos = 0;
+
+int lseekarray(size_t pos, int _) {
+	arr_pos = pos;
+	return 0;
+}
+
+size_t readarray(char *data, size_t len) {
+	for(size_t i = 0; i < len; i++) {
+		data[i] = ARRAY[arr_pos];
+		arr_pos += 1;
+	}
+	return len;
+}
+
+size_t writearray(char *data, size_t len) {
+	for(size_t i = 0; i < len; i++) {
+		ARRAY[arr_pos] = data[i];
+		arr_pos += 1;
+	}
+	return len;
+}
+
 int main() {
-	int dbf, ref;
+	int dbf;
 
 	srand(0); // Derandomize.
 
 	dbf = open("/dev/db", O_RDWR);
 	CHECK(dbf != 0);
-
-	ref = open("ref.txt", O_RDWR);
-	CHECK(ref != 0);
-
-	// Clear out the ref file. Might be stale.
-	for (int i = 0; i < TEST_AREA_LENGTH; i++) {
-		write(ref, "\0", 1);
-	}
 
 	for (size_t test_nr = 0; test_nr < TEST_COUNT; test_nr++) {
 		size_t pos, len;
@@ -64,9 +80,9 @@ int main() {
 				data[i] = rand() % 0x100;
 			}
 			lseek(dbf, pos, SEEK_SET);
-			lseek(ref, pos, SEEK_SET);
+			lseekarray(pos, SEEK_SET);
 
-			CHECK_EQ(write(ref, data, len), len);
+			CHECK_EQ(writearray(data, len), len);
 			CHECK_EQ(write(dbf, data, len), len);
 			delete[] data;
 		}
@@ -76,9 +92,9 @@ int main() {
 			ref_data = new char[len];
 
 			lseek(dbf, pos, SEEK_SET);
-			lseek(ref, pos, SEEK_SET);
+			lseekarray(pos, SEEK_SET);
 
-			CHECK_EQ(read(ref, ref_data, len), len);
+			CHECK_EQ(readarray(ref_data, len), len);
 			CHECK_EQ(read(dbf, data, len), len);
 
 			for (size_t i = 0; i < len; i++) {
