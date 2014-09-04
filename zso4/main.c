@@ -119,7 +119,7 @@ long transdb_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     int retval = 0;
 
     printk(KERN_INFO "transdb_ioctl(type=%c, cmd=%d)\n",
-    		_IOC_TYPE(cmd), _IOC_NR(cmd));
+           _IOC_TYPE(cmd), _IOC_NR(cmd));
 
     // Extract the type and number bitfields, and don't decode
     // wrong cmds: return ENOTTY (inappropriate ioctl).
@@ -148,11 +148,39 @@ long transdb_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     return retval;
 }
 
+static loff_t transdb_llseek(struct file *filp, loff_t off, int whence)
+{
+    struct scull_dev *dev = filp->private_data;
+    loff_t newpos;
+
+    switch(whence) {
+    case 0: /* SEEK_SET */
+        newpos = off;
+        break;
+
+    case 1: /* SEEK_CUR */
+        newpos = filp->f_pos + off;
+        break;
+
+    case 2: /* SEEK_END */
+        // Not supported.
+        return -EINVAL;
+        break;
+
+    default: /* can't happen */
+        return -EINVAL;
+    }
+    if (newpos < 0) return -EINVAL;
+    filp->f_pos = newpos;
+    return newpos;
+}
+
 static const struct file_operations db_fops = {
     .owner = THIS_MODULE,
+    .open = transdb_open,
+    .llseek = transdb_llseek,
     .read = transdb_read,
     .write = transdb_write,
-    .open = transdb_open,
     .release = transdb_release,
     .unlocked_ioctl = transdb_ioctl,
     .compat_ioctl = transdb_ioctl,
