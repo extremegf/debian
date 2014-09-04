@@ -150,7 +150,6 @@ long transdb_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 static loff_t transdb_llseek(struct file *filp, loff_t off, int whence)
 {
-    struct scull_dev *dev = filp->private_data;
     loff_t newpos;
 
     switch(whence) {
