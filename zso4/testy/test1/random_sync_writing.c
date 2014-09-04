@@ -9,6 +9,7 @@ const size_t TEST_AREA_LENGTH = 10;
 const size_t TEST_COUNT = 100;
 const size_t MAX_SPAN = 2;
 const bool VERBOSE = 1;
+const bool ONLY_READS = 1;
 
 #define deb(...) if(VERBOSE) { printf (__VA_ARGS__); }
 
@@ -56,7 +57,7 @@ int main() {
 		deb("pos = %d, len = %d\n", pos, len);
 
 
-		if (rand() % 2 == 0) {
+		if (!ONLY_READS && rand() % 2 == 0) {
 			deb("Test %d write\n", test_nr);
 
 			data = new char[len];
