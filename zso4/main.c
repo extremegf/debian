@@ -121,7 +121,8 @@ long transdb_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     int retval = 0;
 
-    printk(KERN_INFO "transdb_ioctl()\n");
+    printk(KERN_INFO "transdb_ioctl(type=%c, cmd=%d)\n",
+    		_IOC_TYPE(cmd), _IOC_NR(cmd));
 
     // Extract the type and number bitfields, and don't decode
     // wrong cmds: return ENOTTY (inappropriate ioctl).
