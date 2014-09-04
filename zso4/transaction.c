@@ -182,10 +182,10 @@ static struct db_seg* mimic_segment(struct db_version *ver, ver_t new_ver_id,
     dst_seg->ver_id = new_ver_id;
     memcpy(&dst_seg->data, &src_seg->data, SEGMENT_SIZE);
 
-    printk(KERN_INFO "before insert ver->segments->rnode=%p\n", ver->segments->rnode);
+    printk(KERN_INFO "before insert ver->segments->rnode=%p\n", ver->segments.rnode);
     err = radix_tree_insert(&ver->segments, seg_nr, dst_seg);
     printk(KERN_INFO "radix_tree_insert err=%d\n", err);
-    printk(KERN_INFO "after insert ver->segments->rnode=%p\n", ver->segments->rnode);
+    printk(KERN_INFO "after insert ver->segments->rnode=%p\n", ver->segments.rnode);
     printk_db_versions();
 
     if(err) {
