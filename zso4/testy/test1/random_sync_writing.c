@@ -55,10 +55,9 @@ int main() {
 		   len = 1 + random() % MAX_SPAN;
 		} while (pos + len > TEST_AREA_LENGTH);
 
-		deb("Picked pos = %d and len = %d\n", pos, len);
 
 		if (!ONLY_READS && rand() % 2 == 0) {
-			deb("Test %d write\n", test_nr);
+			deb("Test %d read(count=%d, f_pos=%d)", test_nr, len, pos);
 
 			data = new char[len];
 			for (size_t i = 0; i < len; i++) {
@@ -72,7 +71,7 @@ int main() {
 			delete[] data;
 		}
 		else {
-			deb("Test %d read\n", test_nr);
+			deb("Test %d write(count=%d, f_pos=%d)", test_nr, len, pos);
 			data = new char[len];
 			ref_data = new char[len];
 
@@ -89,7 +88,6 @@ int main() {
 			delete[] data;
 			delete[] ref_data;
 		}
-
 	}
 
 	puts("OK");
