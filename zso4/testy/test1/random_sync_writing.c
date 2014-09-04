@@ -33,8 +33,7 @@ int main() {
 
 	srand(0); // Derandomize.
 
-	//db = fopen("/dev/db", "wb+");
-	db = fopen("/dev/yatb_once", "wb+");
+	db = fopen("/dev/db", "wb+");
 	CHECK(db != NULL);
 
 	ref = fopen("ref.txt", "wb+");
