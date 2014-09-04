@@ -66,7 +66,6 @@ static struct db_version *new_db_version(struct db_version *parent)
 {
     struct db_version *ver = kmalloc(sizeof(struct db_version), GFP_KERNEL);
 
-
     if (!ver)
         return NULL;
 
@@ -184,6 +183,8 @@ static struct db_seg* mimic_segment(struct db_version *ver, ver_t new_ver_id,
     memcpy(&dst_seg->data, &src_seg->data, SEGMENT_SIZE);
 
     err = radix_tree_insert(&ver->segments, seg_nr, dst_seg);
+    printk(KERN_INFO "radix_tree_insert err=%d\n", err);
+
     if(err) {
         kfree(dst_seg);
         return NULL;
