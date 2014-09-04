@@ -33,10 +33,10 @@ int main() {
 
 	srand(0); // Derandomize.
 
-	db = fopen("/dev/db", "wb+");
+	db = fopen("/dev/db", "r+");
 	CHECK(db != NULL);
 
-	ref = fopen("ref.txt", "wb+");
+	ref = fopen("ref.txt", "r+");
 	CHECK(ref != NULL);
 
 	// Clear out the ref file. Might be stale.
