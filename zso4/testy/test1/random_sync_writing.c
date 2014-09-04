@@ -57,7 +57,7 @@ int main() {
 
 
 		if (!ONLY_READS && rand() % 2 == 0) {
-			deb("Test %d read(count=%d, f_pos=%d)", test_nr, len, pos);
+			deb("Test %d read(count=%d, f_pos=%d)\n", test_nr, len, pos);
 
 			data = new char[len];
 			for (size_t i = 0; i < len; i++) {
@@ -71,7 +71,7 @@ int main() {
 			delete[] data;
 		}
 		else {
-			deb("Test %d write(count=%d, f_pos=%d)", test_nr, len, pos);
+			deb("Test %d write(count=%d, f_pos=%d)\n", test_nr, len, pos);
 			data = new char[len];
 			ref_data = new char[len];
 
