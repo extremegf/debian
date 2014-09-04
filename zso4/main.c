@@ -106,14 +106,14 @@ static ssize_t transdb_rw(rw_t rw, struct file *filp,
 static ssize_t transdb_read(struct file *filp, char __user *buf, size_t count,
                             loff_t *f_pos)
 {
-    printk(KERN_INFO "transdb_read()\n");
+    printk(KERN_INFO "read(count=%d, f_pos=%d)\n", (int)count, (int)*f_pos);
     return transdb_rw(TDB_READ, filp, buf, NULL, count, f_pos);
 }
 
 static ssize_t transdb_write(struct file *filp, const char __user *buf,
                              size_t count, loff_t *f_pos)
 {
-    printk(KERN_INFO "transdb_write()\n");
+    printk(KERN_INFO "write(count=%d, f_pos=%d)\n", (int)count, (int)*f_pos);
     return transdb_rw(TDB_WRITE, filp, NULL, buf, count, f_pos);
 }
 
