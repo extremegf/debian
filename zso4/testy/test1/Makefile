@@ -6,4 +6,5 @@ random_sync_writing: random_sync_writing.c
 	
 
 test1: random_sync_writing
+        rmmod transdb; insmod /root/linux-3.13.3/zso4/transdb.ko
 	./random_sync_writing
