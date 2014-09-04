@@ -184,6 +184,7 @@ static struct db_seg* mimic_segment(struct db_version *ver, ver_t new_ver_id,
 
     err = radix_tree_insert(&ver->segments, seg_nr, dst_seg);
     printk(KERN_INFO "radix_tree_insert err=%d\n", err);
+    printk_db_versions();
 
     if(err) {
         kfree(dst_seg);
